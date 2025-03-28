@@ -1,0 +1,124 @@
+/* --- Global Resets & Body --- */
+*, *::before, *::after { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; margin: 0; padding: 0; background-color: #f3f2f2; color: #181818; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+
+/* --- Headings --- */
+h1 { color: #005fb2; text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-weight: 600; font-size: 1.8rem; }
+h2 { color: #005fb2; text-align: center; margin-top: 0; margin-bottom: 1rem; font-weight: 500; font-size: 1.3rem; }
+h3 { margin-top: 0; margin-bottom: 1rem; color: #005fb2; font-weight: 500; font-size: 1.15rem; text-align: center; }
+
+/* --- Card Styling (Common for Sections) --- */
+.card { background-color: #ffffff; border: 1px solid #dddbda; border-radius: 0.25rem; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); padding: 1rem; margin: 1rem auto; width: auto; margin-left: 10px; margin-right: 10px; }
+
+/* --- Input & Filter Controls --- */
+.input-area { text-align: center; max-width: 600px; }
+.input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: #3e3e3c; }
+#excelFile { border: 1px solid #dddbda; padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; }
+.filter-controls { display: flex; flex-direction: column; gap: 1rem; max-width: 600px; }
+.filter-group { display: flex; flex-direction: column; align-items: stretch; gap: 0.25rem; margin-bottom: 0; }
+.filter-group label { font-weight: 600; color: #3e3e3c; margin-bottom: 0; width: auto; text-align: left; }
+.filter-group select { padding: 0.6rem 0.75rem; border: 1px solid #dddbda; border-radius: 0.25rem; min-width: 0; width: 100%; background-color: #fff; }
+.filter-group select:disabled { background-color: #f3f2f2; cursor: not-allowed; color: #5c5c5c; }
+
+/* --- Status Message --- */
+#status { margin-top: 1rem; margin-bottom: 1rem; font-style: italic; color: #5c5c5c; text-align: center; min-height: 1.5em; padding: 0 10px; }
+
+/* --- Summary & Stat Containers --- */
+.summary-container, .rep-pmr-container, .training-stats-container, .share-container { max-width: 650px; }
+.summary-container p, .rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; }
+.summary-container p:last-child, .rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
+.summary-container span[style*="background-color"], .rep-pmr-container span, .training-stats-container span { font-weight: 500; }
+.summary-container hr { border: none; border-top: 1px solid #dddbda; margin: 0.75rem 0; }
+
+/* --- Share Section --- */
+.share-container { max-width: 600px; }
+.share-controls {
+    display: flex;
+    flex-direction: column; /* Stack on mobile */
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.share-controls label {
+    font-weight: 600;
+    color: #3e3e3c;
+    margin-bottom: 0.25rem; /* Space below label when stacked */
+}
+.share-controls input[type="email"] {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #dddbda;
+    border-radius: 0.25rem;
+    flex-grow: 1; /* Allow input to grow */
+}
+.share-controls button {
+    padding: 0.6rem 1rem;
+    background-color: #0070d2; /* Salesforce blue */
+    color: #ffffff;
+    border: none;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.share-controls button:hover {
+    background-color: #005fb2; /* Darker blue */
+}
+.share-status {
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #0070d2;
+    min-height: 1.2em;
+}
+.share-note {
+    font-size: 0.85rem;
+    color: #5c5c5c;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+
+/* --- Chart Container --- */
+.chart-container { height: 300px; max-width: 950px; }
+#lineChartCanvas { width: 100% !important; height: 100% !important; }
+
+/* --- Table Container & Table --- */
+.table-container { max-width: 1100px; }
+.table-container h2 { margin-bottom: 0.75rem; font-size: 1.2rem; }
+.table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+#attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
+#attachRateTable th, #attachRateTable td { border: 1px solid #dddbda; padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; }
+#attachRateTable th { background-color: #f3f2f2; font-weight: 600; color: #080707; position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; }
+#attachRateTable tbody tr:hover { background-color: #f3faff; }
+#attachRateTable td:not(:first-child) { text-align: right; }
+.highlight-green { background-color: #e2f5e2 !important; color: #067906; font-weight: 500; }
+.highlight-red { background-color: #ffeaea !important; color: #d80808; font-weight: 500; }
+#attachTableStatus { margin-top: 0.75rem; color: #5c5c5c; font-size: 0.85rem; text-align: center; }
+
+
+/* --- MEDIA QUERIES for Larger Screens --- */
+@media (min-width: 600px) {
+    .container { padding: 20px; }
+    .input-area label { display: inline-block; margin-bottom: 0; }
+    #excelFile { width: auto; max-width: 350px; }
+    /* Keep Filters stacked */
+    .summary-container p, .rep-pmr-container p, .training-stats-container p { font-size: 1rem; padding-left: 1rem; }
+    .summary-container hr { margin: 1rem 0; }
+    .chart-container { height: 350px; }
+    #attachRateTable { font-size: 0.9rem; }
+    #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
+    #attachRateTable th { font-size: 0.85rem; }
+
+    /* Share controls side-by-side on larger screens */
+    .share-controls { flex-direction: row; align-items: center; }
+    .share-controls label { margin-bottom: 0; }
+}
+@media (min-width: 992px) {
+    h1 { font-size: 2rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+    .input-area, .filter-controls, .summary-container, .chart-container, .table-container, .rep-pmr-container, .training-stats-container, .share-container { padding: 1.5rem; margin: 1.5rem auto; }
+    .filter-controls { gap: 1.5rem; }
+    .chart-container { height: 450px; }
+    #attachRateTable { font-size: 0.9rem; }
+    #attachRateTable th { font-size: 0.9rem; }
+}
