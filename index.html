@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Excel Data Dashboard</h1>
+
+    <p>Upload an Excel file (.xlsx or .xls) containing store revenue data (uses data from Excel rows 2-62).</p>
+
+    <div class="input-area card">
+        <label for="excelFile">Choose Excel File:</label>
+        <input type="file" id="excelFile" accept=".xlsx, .xls" />
+    </div>
+
+    <!-- Filter Controls Section -->
+    <div class="filter-controls card">
+        <div class="filter-group">
+            <label for="subchannelFilter">Filter by Subchannel:</label>
+            <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
+        </div>
+        <div class="filter-group">
+            <label for="titleFilter">Filter by Title:</label>
+            <select id="titleFilter" disabled><option value="ALL">-- Load File First --</option></select>
+        </div>
+    </div>
+    <!-- End Filter Controls -->
+
+    <p id="status">No file selected.</p>
+
+    <!-- Placeholder for the summary data -->
+    <div id="summaryData" class="summary-container card"></div>
+
+    <!-- Mysteryshop Section -->
+    <div id="repPmrSection" class="card rep-pmr-container" style="display: none;">
+        <h3>Mysteryshop Results</h3>
+        <p id="repSkillP">Rep Skill Ach: <span id="repSkillAchValue">N/A</span></p>
+        <p id="vPmrP">(V)PMR Ach: <span id="vPmrAchValue">N/A</span></p>
+    </div>
+
+    <!-- Training Stats Section -->
+    <div id="trainingStatsSection" class="card training-stats-container" style="display: none;">
+        <h3>Training Stats (Filtered Avg)</h3>
+        <p id="eliteP" style="display: none;">Elite: <span id="eliteValue">N/A</span></p>
+        <p id="postTrainingP">Post Training Score: <span id="postTrainingScoreValue">N/A</span></p>
+    </div>
+
+    <!-- Placeholder for the Line Chart -->
+    <div class="chart-container card" id="lineChartContainer">
+        <canvas id="lineChartCanvas"></canvas>
+    </div>
+
+    <!-- Placeholder for the Attach Rate Table -->
+    <div class="table-container card" id="attachRateTableContainer">
+        <h2>Attach Rates (Subchannel Filtered)</h2>
+        <div class="table-wrapper">
+             <table id="attachRateTable">
+                <thead><tr><th>Store</th><th>Tablet</th><th>PC</th><th>NC</th><th>TWS</th><th>WW</th><th>ME</th><th>NCME</th></tr></thead>
+                <tbody id="attachRateTableBody"></tbody>
+            </table>
+        </div>
+         <p id="attachTableStatus" style="text-align: center; font-style: italic; margin-top: 10px;"></p>
+    </div>
+
+    <!-- *** NEW: Share Results Section *** -->
+    <div id="shareSection" class="card share-container">
+        <h3>Share Results via Email</h3>
+        <div class="share-controls">
+            <label for="emailRecipient">Recipient Email:</label>
+            <input type="email" id="emailRecipient" placeholder="Enter email address">
+            <button id="shareEmailButton">Generate & Share Email</button>
+        </div>
+        <p id="shareStatus" class="share-status"></p>
+        <p class="share-note">Note: This will open your default desktop email client. You must click "Send" in the email client.</p>
+    </div>
+
+
+    <!-- Include Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+
+</body>
+</html>
