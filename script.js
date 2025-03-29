@@ -8,6 +8,9 @@ const statusElement = document.getElementById('status');
 const summaryElement = document.getElementById('summaryData');
 const lineChartCanvas = document.getElementById('lineChartCanvas').getContext('2d');
 const attachRateTableBody = document.getElementById('attachRateTableBody');
+// *** Get reference to table container and H2 for dynamic title update ***
+const attachRateTableContainer = document.getElementById('attachRateTableContainer');
+const attachRateTableHeading = attachRateTableContainer.querySelector('h2'); // Get the H2 inside
 const attachTableStatusElement = document.getElementById('attachTableStatus');
 const subchannelFilter = document.getElementById('subchannelFilter');
 const storeFilter = document.getElementById('storeFilter');
@@ -45,8 +48,60 @@ function resetMultiSelect(selectElement, valueToSelect) { const valuesToSelect =
 // --- Event Handlers --- (No changes)
 function handleSubchannelChange() { updateStoreFilterOptions(); filterAndDisplayData(); }
 
-// --- Data Filtering and Display Trigger --- (No changes)
-function filterAndDisplayData() { const selectedSubchannel = subchannelFilter.value; const selectedStoreOptions = Array.from(storeFilter.selectedOptions); let selectedStores = selectedStoreOptions.map(option => option.value); const allStoresOption = storeFilter.querySelector('option[value="ALL"]'); const containsAll = selectedStores.includes('ALL'); const containsIndividual = selectedStores.some(val => val !== 'ALL'); if (containsAll && containsIndividual) { if (allStoresOption) allStoresOption.selected = false; selectedStores = selectedStores.filter(val => val !== 'ALL'); } else if (!containsAll && selectedStores.length === 0 && allStoresOption) { allStoresOption.selected = true; selectedStores = ['ALL']; } else if (containsAll && !containsIndividual && selectedStores.length === 1 && allStoresOption) { if (!allStoresOption.selected) allStoresOption.selected = true; for(let i = 0; i < storeFilter.options.length; i++) { if (storeFilter.options[i].value !== 'ALL') storeFilter.options[i].selected = false; } } const isAllStoresSelected = selectedStores.includes('ALL'); const isSingleStoreSelected = !isAllStoresSelected && selectedStores.length === 1; let fullyFilteredData = originalData; if (selectedSubchannel !== 'ALL') { fullyFilteredData = fullyFilteredData.filter(row => String(row['SUBCHANNEL'] || '').trim() === selectedSubchannel); } if (!isAllStoresSelected) { fullyFilteredData = fullyFilteredData.filter(row => selectedStores.includes(String(row['Store'] || '').trim())); } let subchannelFilteredData = originalData; if (selectedSubchannel !== 'ALL') { subchannelFilteredData = subchannelFilteredData.filter(row => String(row['SUBCHANNEL'] || '').trim() === selectedSubchannel); } const baseMessage = `Displaying ${fullyFilteredData.length} matching records for summary from first ${originalData.length} data rows.`; let currentStatus = statusElement.textContent; let warningPart = ""; if(currentStatus.includes("Warning:")) { warningPart = currentStatus.substring(currentStatus.indexOf("Warning:")); } if (fullyFilteredData.length === 0 && originalData.length > 0) { statusElement.textContent = "No data matches the current Subchannel/Store filter selection." + warningPart; } else if (originalData.length > 0) { statusElement.textContent = baseMessage + warningPart; } processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSingleStoreSelected); }
+// --- Data Filtering and Display Trigger ---
+function filterAndDisplayData() {
+    const selectedSubchannel = subchannelFilter.value;
+    const selectedStoreOptions = Array.from(storeFilter.selectedOptions);
+    let selectedStores = selectedStoreOptions.map(option => option.value);
+    const allStoresOption = storeFilter.querySelector('option[value="ALL"]');
+    const containsAll = selectedStores.includes('ALL');
+    const containsIndividual = selectedStores.some(val => val !== 'ALL');
+
+    if (containsAll && containsIndividual) {
+        if (allStoresOption) allStoresOption.selected = false;
+        selectedStores = selectedStores.filter(val => val !== 'ALL');
+    } else if (!containsAll && selectedStores.length === 0 && allStoresOption) {
+        allStoresOption.selected = true;
+        selectedStores = ['ALL'];
+    } else if (containsAll && !containsIndividual && selectedStores.length === 1 && allStoresOption) {
+        if (!allStoresOption.selected) allStoresOption.selected = true;
+        for(let i = 0; i < storeFilter.options.length; i++) {
+            if (storeFilter.options[i].value !== 'ALL') storeFilter.options[i].selected = false;
+        }
+    }
+
+    const isAllStoresSelected = selectedStores.includes('ALL'); // Check based on updated list
+    const isSingleStoreSelected = !isAllStoresSelected && selectedStores.length === 1;
+
+    let fullyFilteredData = originalData;
+    if (selectedSubchannel !== 'ALL') {
+        fullyFilteredData = fullyFilteredData.filter(row => String(row['SUBCHANNEL'] || '').trim() === selectedSubchannel);
+    }
+    // This filter step *must* happen before passing to processAndDisplayData
+    // if we want to use fullyFilteredData for specific store details.
+    if (!isAllStoresSelected) {
+        fullyFilteredData = fullyFilteredData.filter(row =>
+            selectedStores.includes(String(row['Store'] || '').trim())
+        );
+    }
+
+    // This remains filtered only by subchannel, UNLESS specific stores are selected
+    let subchannelFilteredData = originalData;
+    if (selectedSubchannel !== 'ALL') {
+        subchannelFilteredData = subchannelFilteredData.filter(row => String(row['SUBCHANNEL'] || '').trim() === selectedSubchannel);
+    }
+
+    // Update status message (no change here)
+    const baseMessage = `Displaying ${fullyFilteredData.length} matching records for summary from first ${originalData.length} data rows.`;
+    let currentStatus = statusElement.textContent;
+    let warningPart = "";
+    if(currentStatus.includes("Warning:")) { warningPart = currentStatus.substring(currentStatus.indexOf("Warning:")); }
+    if (fullyFilteredData.length === 0 && originalData.length > 0) { statusElement.textContent = "No data matches the current Subchannel/Store filter selection." + warningPart; }
+    else if (originalData.length > 0) { statusElement.textContent = baseMessage + warningPart; }
+
+    // *** Pass isAllStoresSelected flag along with isSingleStoreSelected ***
+    processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSingleStoreSelected, isAllStoresSelected);
+}
 
 
 // --- Helper Functions --- (No changes)
@@ -57,112 +112,232 @@ function getGradientColor(value, min, max) { if (value === null || min === null 
 function calculateColumnStats(data, columnName) { const values = data.map(row => parsePercentage(row[columnName])).filter(val => val !== null && !isNaN(val)); if (values.length === 0) { return { average: null, stdDev: null, count: 0 }; } const sum = values.reduce((acc, val) => acc + val, 0); const average = sum / values.length; let stdDev = null; if (values.length > 1) { const squareDiffs = values.map(val => Math.pow(val - average, 2)); const avgSquareDiff = squareDiffs.reduce((acc, val) => acc + val, 0) / values.length; stdDev = Math.sqrt(avgSquareDiff); } else { stdDev = 0; } return { average: average, stdDev: stdDev, count: values.length }; }
 
 
-// --- Function: Process Data and Update Dashboard --- (No changes)
-function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSingleStoreSelected) { let totalRevenueUnfiltered = 0; let totalTargetUnfiltered = 0; originalData.forEach(row => { totalRevenueUnfiltered += (parseFloat(row['Revenue w/DF']) || 0); totalTargetUnfiltered += (parseFloat(row['QTD Revenue Target']) || 0); }); const territoryRevARUnfilteredDecimal = totalTargetUnfiltered > 0 ? (totalRevenueUnfiltered / totalTargetUnfiltered) : null; let totalQtdTargetFiltered = 0, totalRevenueWithDFFiltered = 0, totalUnitsWithDFFiltered = 0, totalUnitTargetFiltered = 0; let sumRepSkill = 0, countRepSkill = 0, sumVPmr = 0, countVPmr = 0, hasRepPmrData = false; let sumElite = 0, countElite = 0, sumPostTrain = 0, countPostTrain = 0, hasNonZeroElite = false; let lineChartLabels = [], lineChartRevARData = [], lineChartUnitAchData = []; let attachRateDataForTable = []; let attachRateStats = {}; let territoryValueForDisplay = null; const attachRateColumns = ['Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate']; const summaryRequiredCols = ['Revenue w/DF', 'QTD Revenue Target', 'Territory Rev%', 'Unit w/ DF', 'Unit Target', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score']; const lineChartRequiredCols = ['Rev AR%', 'Unit Achievement', 'Store', 'STORE ID']; const tableRequiredCols = [...attachRateColumns, 'Store', 'STORE ID']; const dataToCheckColumns = fullyFilteredData.length > 0 ? fullyFilteredData : (subchannelFilteredData.length > 0 ? subchannelFilteredData : originalData); let missingSummaryCols = [], missingLineCols = [], missingTableCols = []; if (dataToCheckColumns.length > 0) { summaryRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingSummaryCols.push(col); }); lineChartRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingLineCols.push(col); }); tableRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingTableCols.push(col); }); } if (missingSummaryCols.length > 0) console.warn("Missing columns for Summary/Stats:", missingSummaryCols); if (missingLineCols.length > 0) console.warn("Missing columns for Line Chart:", missingLineCols); if (missingTableCols.length > 0) console.warn("Missing columns for Attach Rate Table:", missingTableCols); if (fullyFilteredData.length > 0 && missingSummaryCols.length === 0) { fullyFilteredData.forEach(row => { totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0); totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0); totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0); totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0); const repSkill = parsePercentage(row['Rep Skill Ach']); if (repSkill !== null) { sumRepSkill += repSkill; countRepSkill++; hasRepPmrData = true; } const vPmr = parsePercentage(row['(V)PMR Ach']); if (vPmr !== null) { sumVPmr += vPmr; countVPmr++; hasRepPmrData = true; } const elite = parsePercentage(row['Elite']); if (elite !== null) { sumElite += elite; countElite++; if (elite > 0.0001) hasNonZeroElite = true; } const postTrainScore = parseFloat(row['Post Training Score']); if (!isNaN(postTrainScore)) { sumPostTrain += postTrainScore; countPostTrain++; } }); if (isSingleStoreSelected && fullyFilteredData.length === 1) { territoryValueForDisplay = parsePercentage(fullyFilteredData[0]['Territory Rev%']); } else { let sumOfTerritoryRevPercentages = 0; let countValidTerritoryRev = 0; fullyFilteredData.forEach(row => { const terrRev = parsePercentage(row['Territory Rev%']); if (terrRev !== null) { sumOfTerritoryRevPercentages += terrRev; countValidTerritoryRev++; } }); territoryValueForDisplay = countValidTerritoryRev > 0 ? sumOfTerritoryRevPercentages : null; isSingleStoreSelected = false; } } const overallRevenueAchievementFilteredDecimal = totalQtdTargetFiltered > 0 ? (totalRevenueWithDFFiltered / totalQtdTargetFiltered) : null; const overallUnitAchievementFilteredPercent = totalUnitTargetFiltered > 0 ? (totalUnitsWithDFFiltered / totalUnitTargetFiltered) * 100 : null; const avgRepSkillAch = countRepSkill > 0 ? sumRepSkill / countRepSkill : null; const avgVPmrAch = countVPmr > 0 ? sumVPmr / countVPmr : null; const avgElite = countElite > 0 ? sumElite / countElite : null; const avgPostTrainScore = countPostTrain > 0 ? sumPostTrain / countPostTrain : null; displaySummary( totalQtdTargetFiltered, totalRevenueWithDFFiltered, overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal, isSingleStoreSelected, territoryValueForDisplay, totalUnitsWithDFFiltered, totalUnitTargetFiltered, overallUnitAchievementFilteredPercent ); displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasRepPmrData); displayTrainingStats(avgElite, avgPostTrainScore, hasNonZeroElite); if (subchannelFilteredData.length > 0) { if (missingTableCols.length === 0) { attachRateColumns.forEach(colName => { attachRateStats[colName] = calculateColumnStats(subchannelFilteredData, colName); }); } else { attachRateColumns.forEach(colName => { attachRateStats[colName] = { average: null, stdDev: null, count: 0 }; }); } subchannelFilteredData.forEach((row, index) => { const storeLabel = (row['Store'] && String(row['Store']).trim()) || (row['STORE ID'] && String(row['STORE ID']).trim()) || `Unknown ${index + 1}`; if(missingLineCols.length === 0) { lineChartLabels.push(storeLabel); lineChartRevARData.push(parsePercentage(row['Rev AR%'])); lineChartUnitAchData.push(parsePercentage(row['Unit Achievement'])); } if(missingTableCols.length === 0) { const tableRow = { store: storeLabel }; attachRateColumns.forEach(col => tableRow[col] = row[col]); attachRateDataForTable.push(tableRow); } }); } const lineChartData = (missingLineCols.length === 0 && lineChartLabels.length > 0) ? { labels: lineChartLabels, datasets: [ { label: 'Rev AR %', data: lineChartRevARData, borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.7)', /* Increased opacity */ yAxisID: 'yPercentage' }, { label: 'Unit Achievement %', data: lineChartUnitAchData, borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.7)', /* Increased opacity */ yAxisID: 'yPercentage' } ] } : { labels: [], datasets: [] }; displayLineChart(lineChartData); if(missingTableCols.length === 0 && attachRateDataForTable.length > 0){ displayAttachRateTable(attachRateDataForTable, attachRateStats); } else { displayAttachRateTable([], {}); } }
+// --- Function: Process Data and Update Dashboard (RESTRUCTURED) ---
+// *** Added isAllStoresSelected parameter ***
+function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSingleStoreSelected, isAllStoresSelected) {
+
+    // --- 1. Calculate Overall Territory Benchmark --- (No change)
+    let totalRevenueUnfiltered = 0; let totalTargetUnfiltered = 0;
+    originalData.forEach(row => { totalRevenueUnfiltered += (parseFloat(row['Revenue w/DF']) || 0); totalTargetUnfiltered += (parseFloat(row['QTD Revenue Target']) || 0); });
+    const territoryRevARUnfilteredDecimal = totalTargetUnfiltered > 0 ? (totalRevenueUnfiltered / totalTargetUnfiltered) : null;
+
+    // --- 2. Initialize variables ---
+    let totalQtdTargetFiltered = 0, totalRevenueWithDFFiltered = 0, totalUnitsWithDFFiltered = 0, totalUnitTargetFiltered = 0;
+    let sumRepSkill = 0, countRepSkill = 0, sumVPmr = 0, countVPmr = 0, hasRepPmrData = false;
+    let sumElite = 0, countElite = 0, sumPostTrain = 0, countPostTrain = 0, hasNonZeroElite = false;
+    let lineChartLabels = [], lineChartRevARData = [], lineChartUnitAchData = [];
+    let attachRateDataForTable = [];
+    let attachRateStats = {};
+    let territoryValueForDisplay = null;
+    // *** NEW: Variable for Post Training Score (single or average) ***
+    let postTrainValueForDisplay = null;
+
+    // Column Names (No change)
+    const attachRateColumns = ['Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'];
+    const summaryRequiredCols = ['Revenue w/DF', 'QTD Revenue Target', 'Territory Rev%', 'Unit w/ DF', 'Unit Target', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score'];
+    const lineChartRequiredCols = ['Rev AR%', 'Unit Achievement', 'Store', 'STORE ID'];
+    const tableRequiredCols = [...attachRateColumns, 'Store', 'STORE ID'];
+
+    // --- 3. Check for Missing Columns --- (No change)
+    const dataToCheckColumns = fullyFilteredData.length > 0 ? fullyFilteredData : (subchannelFilteredData.length > 0 ? subchannelFilteredData : originalData);
+    let missingSummaryCols = [], missingLineCols = [], missingTableCols = [];
+    if (dataToCheckColumns.length > 0) { summaryRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingSummaryCols.push(col); }); lineChartRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingLineCols.push(col); }); tableRequiredCols.forEach(col => { if (dataToCheckColumns[0][col] === undefined) missingTableCols.push(col); }); }
+    if (missingSummaryCols.length > 0) console.warn("Missing columns for Summary/Stats:", missingSummaryCols);
+    if (missingLineCols.length > 0) console.warn("Missing columns for Line Chart:", missingLineCols);
+    if (missingTableCols.length > 0) console.warn("Missing columns for Attach Rate Table:", missingTableCols);
+
+    // --- 4. Process FULLY Filtered Data ---
+    if (fullyFilteredData.length > 0 && missingSummaryCols.length === 0) {
+        // --- Loop 1: Calculate overall totals and sum conditional stats ---
+        fullyFilteredData.forEach(row => {
+            totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0);
+            totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0);
+            totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0);
+            totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0);
+            const repSkill = parsePercentage(row['Rep Skill Ach']); if (repSkill !== null) { sumRepSkill += repSkill; countRepSkill++; hasRepPmrData = true; }
+            const vPmr = parsePercentage(row['(V)PMR Ach']); if (vPmr !== null) { sumVPmr += vPmr; countVPmr++; hasRepPmrData = true; }
+            const elite = parsePercentage(row['Elite']); if (elite !== null) { sumElite += elite; countElite++; if (elite > 0.0001) hasNonZeroElite = true; }
+            const postTrainScore = parseFloat(row['Post Training Score']); if (!isNaN(postTrainScore)) { sumPostTrain += postTrainScore; countPostTrain++; }
+        });
+
+        // --- Determine Territory Value --- (No change needed here)
+        if (isSingleStoreSelected && fullyFilteredData.length === 1) { territoryValueForDisplay = parsePercentage(fullyFilteredData[0]['Territory Rev%']); }
+        else { let sumOfTerritoryRevPercentages = 0; let countValidTerritoryRev = 0; fullyFilteredData.forEach(row => { const terrRev = parsePercentage(row['Territory Rev%']); if (terrRev !== null) { sumOfTerritoryRevPercentages += terrRev; countValidTerritoryRev++; } }); territoryValueForDisplay = countValidTerritoryRev > 0 ? sumOfTerritoryRevPercentages : null; isSingleStoreSelected = false; }
+
+        // *** NEW: Determine Post Training Score value ***
+        if (countPostTrain === 1 && fullyFilteredData.length === 1) {
+            // If exactly one store was filtered AND it had a score
+            postTrainValueForDisplay = parseFloat(fullyFilteredData[0]['Post Training Score']);
+            if(isNaN(postTrainValueForDisplay)) postTrainValueForDisplay = null; // Handle if the single value was NaN
+        } else if (countPostTrain > 0) {
+            // If multiple stores contributed scores, calculate average
+            postTrainValueForDisplay = sumPostTrain / countPostTrain;
+        } // Else: postTrainValueForDisplay remains null
+
+    } // End if (fullyFilteredData.length > 0 && missingSummaryCols.length === 0)
+
+    // --- Calculate OTHER Overall Averages/Totals --- (No change)
+    const overallRevenueAchievementFilteredDecimal = totalQtdTargetFiltered > 0 ? (totalRevenueWithDFFiltered / totalQtdTargetFiltered) : null;
+    const overallUnitAchievementFilteredPercent = totalUnitTargetFiltered > 0 ? (totalUnitsWithDFFiltered / totalUnitTargetFiltered) * 100 : null;
+    const avgRepSkillAch = countRepSkill > 0 ? sumRepSkill / countRepSkill : null;
+    const avgVPmrAch = countVPmr > 0 ? sumVPmr / countVPmr : null;
+    const avgElite = countElite > 0 ? sumElite / countElite : null;
+    // REMOVED: avgPostTrainScore calculation here, now handled above
+
+
+    // --- 5. Display Summary and Conditional Sections ---
+    displaySummary( totalQtdTargetFiltered, totalRevenueWithDFFiltered, overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal, isSingleStoreSelected, territoryValueForDisplay, totalUnitsWithDFFiltered, totalUnitTargetFiltered, overallUnitAchievementFilteredPercent );
+    displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasRepPmrData);
+    // *** Pass postTrainValueForDisplay and countPostTrain ***
+    displayTrainingStats(avgElite, postTrainValueForDisplay, countPostTrain, hasNonZeroElite);
+
+
+    // --- 6. Process Data for Chart and Table ---
+    // *** Determine which dataset to use for details ***
+    const dataForDetails = isAllStoresSelected ? subchannelFilteredData : fullyFilteredData;
+
+    // Only proceed if dataForDetails is not empty and columns are present
+    if (dataForDetails.length > 0) {
+        // *** Recalculate Attach Rate Stats based on the correct dataset ***
+        if (missingTableCols.length === 0) {
+            attachRateColumns.forEach(colName => {
+                attachRateStats[colName] = calculateColumnStats(dataForDetails, colName); // Use dataForDetails
+            });
+        } else {
+            attachRateColumns.forEach(colName => { attachRateStats[colName] = { average: null, stdDev: null, count: 0 }; });
+        }
+
+        // Prepare data arrays using dataForDetails
+        dataForDetails.forEach((row, index) => { // Use dataForDetails
+            const storeLabel = (row['Store'] && String(row['Store']).trim()) || (row['STORE ID'] && String(row['STORE ID']).trim()) || `Unknown ${index + 1}`;
+            // Chart Data
+            if(missingLineCols.length === 0) {
+                lineChartLabels.push(storeLabel);
+                lineChartRevARData.push(parsePercentage(row['Rev AR%']));
+                lineChartUnitAchData.push(parsePercentage(row['Unit Achievement']));
+            }
+            // Table Data
+            if(missingTableCols.length === 0) {
+                 const tableRow = { store: storeLabel };
+                 attachRateColumns.forEach(col => tableRow[col] = row[col]);
+                 attachRateDataForTable.push(tableRow);
+            }
+        });
+    } // Else arrays remain empty
+
+
+    // --- 7. Display Chart and Table ---
+    // *** Pass isAllStoresSelected flag for dynamic titles/labels ***
+    const chartData = (missingLineCols.length === 0 && lineChartLabels.length > 0)
+        ? { labels: lineChartLabels, datasets: [ { label: 'Rev AR %', data: lineChartRevARData, borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.7)', yAxisID: 'yPercentage' }, { label: 'Unit Achievement %', data: lineChartUnitAchData, borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.7)', yAxisID: 'yPercentage' } ] }
+        : { labels: [], datasets: [] };
+    displayLineChart(chartData, isAllStoresSelected); // Pass flag
+
+    if(missingTableCols.length === 0 && attachRateDataForTable.length > 0){
+         displayAttachRateTable(attachRateDataForTable, attachRateStats, isAllStoresSelected); // Pass flag
+    } else {
+         displayAttachRateTable([], {}, isAllStoresSelected); // Pass flag even when empty
+    }
+}
 
 
 // --- Display Functions ---
 function displaySummary( totalQtdTargetFiltered, totalRevenueWithDFFiltered, overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal, isSingleStoreSelected, territoryValueDecimal, totalUnitsWithDFFiltered, totalUnitTargetFiltered, overallUnitAchievementFilteredPercent ) { const displayRevenueAchPercent = overallRevenueAchievementFilteredDecimal !== null ? formatPercentage(overallRevenueAchievementFilteredDecimal, 2) : 'N/A'; const achievementBgColor = getAchievementHighlightColor(overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal); const territoryLabel = isSingleStoreSelected ? "Territory Rev %" : "Combined Territory Rev %"; const displayTerritoryValue = formatPercentage(territoryValueDecimal, 2); const displayUnitAchPercent = overallUnitAchievementFilteredPercent !== null ? overallUnitAchievementFilteredPercent.toFixed(2) + '%' : 'N/A'; summaryElement.innerHTML = ` <h3>Filtered QTD Summary</h3> <p>Total QTD Revenue Target: ${formatCurrency(totalQtdTargetFiltered)}</p> <p>Total Revenue w/DF (QTD): ${formatCurrency(totalRevenueWithDFFiltered)}</p> <p>Overall QTD Revenue Achievement: <span style="background-color: ${achievementBgColor}; padding: 2px 5px; border-radius: 3px;">${displayRevenueAchPercent}</span> ${territoryRevARUnfilteredDecimal !== null ? ` (Territory Rev AR%: ${formatPercentage(territoryRevARUnfilteredDecimal, 2)})` : ''}</p> <p>${territoryLabel}: ${displayTerritoryValue}</p> <hr style="border-top: 1px dashed #ccc; margin: 10px 0;"> <p>Total Units w/ DF: ${totalUnitsWithDFFiltered.toLocaleString()}</p> <p>Total Unit Target: ${totalUnitTargetFiltered.toLocaleString()}</p> <p>Overall Unit Achievement: ${displayUnitAchPercent}</p> `; const hasData = overallRevenueAchievementFilteredDecimal !== null || territoryValueDecimal !== null || overallUnitAchievementFilteredPercent !== null || totalUnitsWithDFFiltered > 0 || totalUnitTargetFiltered > 0; summaryElement.style.textAlign = hasData ? 'left' : 'center'; if (!hasData && originalData.length > 0) { summaryElement.innerHTML += '<p style="font-style: italic; text-align: center;">No matching data for summary based on current filters and first 61 data rows.</p>'; } else if (originalData.length === 0) { summaryElement.innerHTML = 'Summary data will appear here...'; } }
 function displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasData) { if (hasData) { repSkillAchValue.textContent = formatPercentage(avgRepSkillAch, 1); vPmrAchValue.textContent = formatPercentage(avgVPmrAch, 1); repPmrSection.style.display = 'block'; } else { repPmrSection.style.display = 'none'; } }
-function displayTrainingStats(avgElite, avgPostTrainScore, hasNonZeroElite) { let showSection = false; if (avgElite !== null && hasNonZeroElite) { eliteValue.textContent = formatPercentage(avgElite, 1); eliteP.style.display = 'block'; showSection = true; } else { eliteP.style.display = 'none'; } if (avgPostTrainScore !== null) { postTrainingScoreValue.textContent = avgPostTrainScore.toFixed(1); postTrainingP.style.display = 'block'; showSection = true; } else { postTrainingScoreValue.textContent = 'N/A'; } if (showSection) { trainingStatsSection.style.display = 'block'; } else { trainingStatsSection.style.display = 'none'; } }
 
-// *** UPDATED displayLineChart function ***
-function displayLineChart(chartData) {
+// *** UPDATED displayTrainingStats parameters and logic ***
+function displayTrainingStats(avgElite, postTrainScore, postTrainCount, hasNonZeroElite) {
+    let showSection = false;
+
+    // Elite % display logic (unchanged)
+    if (avgElite !== null && hasNonZeroElite) {
+        eliteValue.textContent = formatPercentage(avgElite, 1);
+        eliteP.style.display = 'block';
+        showSection = true;
+    } else {
+         eliteP.style.display = 'none';
+    }
+
+    // Post Training Score display logic
+    if (postTrainScore !== null) {
+        // Show average label only if more than one score contributed
+        const avgLabel = postTrainCount > 1 ? " (Avg)" : "";
+        postTrainingScoreValue.textContent = postTrainScore.toFixed(1) + avgLabel;
+        postTrainingP.style.display = 'block';
+        showSection = true;
+    } else {
+        postTrainingScoreValue.textContent = 'N/A';
+        // Don't hide postTrainingP here, might still show N/A if Elite is hidden
+    }
+
+    // Show/hide the whole section
+    if (showSection) {
+        trainingStatsSection.style.display = 'block';
+    } else {
+        trainingStatsSection.style.display = 'none';
+    }
+}
+
+// *** UPDATED displayLineChart function signature and title ***
+function displayLineChart(chartData, isAllStoresSelected) { // Added isAllStoresSelected
     if (lineChartInstance) {
         lineChartInstance.destroy();
     }
     const isEmpty = !chartData || !chartData.labels || chartData.labels.length === 0;
+    const gridColor = 'rgba(255, 255, 255, 0.1)'; const textColor = '#e0e0e0'; const titleColor = '#f0f0f0';
 
-    // Define colors for dark mode chart elements
-    const gridColor = 'rgba(255, 255, 255, 0.1)';
-    const textColor = '#e0e0e0';
-    const titleColor = '#f0f0f0';
+    // *** Determine chart title based on data source ***
+    const chartTitleText = isEmpty
+        ? 'Bar Chart - Select Subchannel or Stores / No Data'
+        : `Rev AR % vs Unit Achievement % per Store (${isAllStoresSelected ? 'Subchannel Filtered' : 'Selected Stores'})`;
 
     lineChartInstance = new Chart(lineChartCanvas, {
-        // *** CHANGE TYPE TO 'bar' ***
-        type: 'bar',
-        data: chartData, // Data structure remains the same
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    // *** UPDATED TITLE TEXT ***
-                    text: isEmpty ? 'Bar Chart - Select Subchannel / No Data' : 'Rev AR % vs Unit Achievement % per Store (Subchannel Filtered)',
-                    color: titleColor // Dark mode title color
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            // Use formattedValue for bars, fallback to parsed if needed
-                            if (context.formattedValue !== null) {
-                                // Tooltips for bar charts often show the direct value,
-                                // but we still want percentages here.
-                                label += formatPercentage(context.parsed.y);
-                            } else {
-                                label += 'N/A';
-                            }
-                            return label;
-                        }
-                    }
-                },
-                legend: { // Dark mode legend color
-                    labels: {
-                        color: textColor
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index', // Shows tooltips for both bars at the same index
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Store',
-                        color: textColor // Dark mode axis title color
-                    },
-                    ticks: {
-                         color: textColor // Dark mode axis labels color
-                    },
-                    grid: {
-                        color: gridColor // Dark mode grid lines
-                    }
-                },
-                yPercentage: { // Keep using this scale ID
-                    type: 'linear',
-                    position: 'left',
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Percentage (%)',
-                        color: textColor // Dark mode axis title color
-                    },
-                    ticks: {
-                        // Format Y-axis labels as percentages
-                        callback: function(value, index, values) {
-                            return formatPercentage(value, 0); // e.g., 50%
-                        },
-                        color: textColor // Dark mode axis labels color
-                    },
-                    grid: {
-                        color: gridColor // Dark mode grid lines
-                    }
-                }
-            },
-            // Remove options specific to line charts:
-            // tension: 0.1,
-            // spanGaps: false
+        type: 'bar', data: chartData, options: { responsive: true, maintainAspectRatio: false, plugins: {
+                title: { display: true, text: chartTitleText, color: titleColor }, // Use dynamic title
+                tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.formattedValue !== null) { label += formatPercentage(context.parsed.y); } else { label += 'N/A'; } return label; } } },
+                legend: { labels: { color: textColor } }
+            }, interaction: { intersect: false, mode: 'index', }, scales: {
+                x: { title: { display: true, text: 'Store', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } },
+                yPercentage: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Percentage (%)', color: textColor }, ticks: { callback: function(value, index, values) { return formatPercentage(value, 0); }, color: textColor }, grid: { color: gridColor } }
+            }
         }
     });
 }
-function displayAttachRateTable(tableData, columnStats) { attachRateTableBody.innerHTML = ''; attachTableStatusElement.textContent = ''; if (!tableData || tableData.length === 0) { attachTableStatusElement.textContent = 'No data for selected subchannel or required columns missing.'; return; } if (!columnStats) { console.error("Attach Rate Stats missing!"); attachTableStatusElement.textContent = 'Error calculating stats for highlighting.'; columnStats = {}; } tableData.forEach(rowData => { const row = attachRateTableBody.insertRow(); const addCell = (text) => { const cell = row.insertCell(); cell.textContent = text; return cell; }; const addPercentageCellWithHighlight = (rawValue, colName) => { const cell = row.insertCell(); const decimalValue = parsePercentage(rawValue); cell.textContent = formatPercentage(decimalValue); cell.style.textAlign = 'right'; const stats = columnStats[colName] || { average: null, stdDev: null }; if (decimalValue !== null && stats.average !== null && stats.stdDev !== null && stats.stdDev > 0.0001) { const lowerBound = stats.average - stats.stdDev; const upperBound = stats.average + stats.stdDev; if (decimalValue > upperBound) { cell.classList.add('highlight-green'); } else if (decimalValue < lowerBound) { cell.classList.add('highlight-red'); } } return cell; }; addCell(rowData.store); addPercentageCellWithHighlight(rowData['Tablet Attach Rate'], 'Tablet Attach Rate'); addPercentageCellWithHighlight(rowData['PC Attach Rate'], 'PC Attach Rate'); addPercentageCellWithHighlight(rowData['NC Attach Rate'], 'NC Attach Rate'); addPercentageCellWithHighlight(rowData['TWS Attach Rate'], 'TWS Attach Rate'); addPercentageCellWithHighlight(rowData['WW Attach Rate'], 'WW Attach Rate'); addPercentageCellWithHighlight(rowData['ME Attach Rate'], 'ME Attach Rate'); addPercentageCellWithHighlight(rowData['NCME Attach Rate'], 'NCME Attach Rate'); }); attachTableStatusElement.textContent = `Displaying ${tableData.length} stores in subchannel. Highlight: > avg + 1 std dev (green), < avg - 1 std dev (red).`; }
+
+// *** UPDATED displayAttachRateTable function signature, heading, and status ***
+function displayAttachRateTable(tableData, columnStats, isAllStoresSelected) { // Added isAllStoresSelected
+    attachRateTableBody.innerHTML = '';
+    attachTableStatusElement.textContent = '';
+
+    // *** Update table heading ***
+    if (attachRateTableHeading) {
+        attachRateTableHeading.textContent = `Attach Rates (${isAllStoresSelected ? 'Subchannel Filtered' : 'Selected Stores'})`;
+    }
+
+    if (!tableData || tableData.length === 0) {
+        attachTableStatusElement.textContent = `No data for ${isAllStoresSelected ? 'selected subchannel' : 'selected stores'} or required columns missing.`;
+        return;
+    }
+
+    if (!columnStats) { console.error("Attach Rate Stats missing!"); attachTableStatusElement.textContent = 'Error calculating stats for highlighting.'; columnStats = {}; }
+
+    tableData.forEach(rowData => {
+        const row = attachRateTableBody.insertRow();
+        const addCell = (text) => { const cell = row.insertCell(); cell.textContent = text; return cell; };
+        const addPercentageCellWithHighlight = (rawValue, colName) => { const cell = row.insertCell(); const decimalValue = parsePercentage(rawValue); cell.textContent = formatPercentage(decimalValue); cell.style.textAlign = 'right'; const stats = columnStats[colName] || { average: null, stdDev: null }; if (decimalValue !== null && stats.average !== null && stats.stdDev !== null && stats.stdDev > 0.0001) { const lowerBound = stats.average - stats.stdDev; const upperBound = stats.average + stats.stdDev; if (decimalValue > upperBound) { cell.classList.add('highlight-green'); } else if (decimalValue < lowerBound) { cell.classList.add('highlight-red'); } } return cell; };
+        addCell(rowData.store);
+        addPercentageCellWithHighlight(rowData['Tablet Attach Rate'], 'Tablet Attach Rate');
+        addPercentageCellWithHighlight(rowData['PC Attach Rate'], 'PC Attach Rate');
+        addPercentageCellWithHighlight(rowData['NC Attach Rate'], 'NC Attach Rate');
+        addPercentageCellWithHighlight(rowData['TWS Attach Rate'], 'TWS Attach Rate');
+        addPercentageCellWithHighlight(rowData['WW Attach Rate'], 'WW Attach Rate');
+        addPercentageCellWithHighlight(rowData['ME Attach Rate'], 'ME Attach Rate');
+        addPercentageCellWithHighlight(rowData['NCME Attach Rate'], 'NCME Attach Rate');
+    });
+
+    // *** Update table status message ***
+    attachTableStatusElement.textContent = `Displaying ${tableData.length} stores. Highlight based on stats from ${isAllStoresSelected ? 'subchannel' : 'selected stores'} (> avg + 1 std dev (green), < avg - 1 std dev (red)).`;
+}
 
 
 // --- Email Share Handler --- (No changes)
@@ -170,7 +345,7 @@ function handleShareEmail() { const recipient = emailRecipientInput.value.trim()
 
 // --- Clear Functions --- (No changes)
 function clearChart() { if (lineChartInstance) { lineChartInstance.destroy(); lineChartInstance = null; } }
-function clearDashboard() { clearChart(); summaryElement.innerHTML = 'Summary data will appear here...'; summaryElement.style.textAlign = 'center'; statusElement.textContent = 'No file selected.'; subchannelFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; subchannelFilter.disabled = true; subchannelFilter.value = 'ALL'; storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; resetMultiSelect(storeFilter, 'ALL'); storeFilter.disabled = true; originalData = []; attachRateTableBody.innerHTML = ''; attachTableStatusElement.textContent = ''; if(repPmrSection) repPmrSection.style.display = 'none'; if(trainingStatsSection) trainingStatsSection.style.display = 'none'; if(eliteP) eliteP.style.display = 'none'; if(eliteValue) eliteValue.textContent = 'N/A'; if(postTrainingScoreValue) postTrainingScoreValue.textContent = 'N/A'; if(repSkillAchValue) repSkillAchValue.textContent = 'N/A'; if(vPmrAchValue) vPmrAchValue.textContent = 'N/A'; if(emailRecipientInput) emailRecipientInput.value = ''; if(shareStatusElement) shareStatusElement.textContent = ''; if(fileInput) fileInput.value = ''; }
+function clearDashboard() { clearChart(); summaryElement.innerHTML = 'Summary data will appear here...'; summaryElement.style.textAlign = 'center'; statusElement.textContent = 'No file selected.'; subchannelFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; subchannelFilter.disabled = true; subchannelFilter.value = 'ALL'; storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; resetMultiSelect(storeFilter, 'ALL'); storeFilter.disabled = true; originalData = []; attachRateTableBody.innerHTML = ''; attachTableStatusElement.textContent = ''; if(repPmrSection) repPmrSection.style.display = 'none'; if(trainingStatsSection) trainingStatsSection.style.display = 'none'; if(eliteP) eliteP.style.display = 'none'; if(eliteValue) eliteValue.textContent = 'N/A'; if(postTrainingScoreValue) postTrainingScoreValue.textContent = 'N/A'; if(repSkillAchValue) repSkillAchValue.textContent = 'N/A'; if(vPmrAchValue) vPmrAchValue.textContent = 'N/A'; if(emailRecipientInput) emailRecipientInput.value = ''; if(shareStatusElement) shareStatusElement.textContent = ''; if(fileInput) fileInput.value = ''; // Also reset table title on clear if(attachRateTableHeading) attachRateTableHeading.textContent = 'Attach Rates (Subchannel Filtered)';}
 
 // --- Helper Function to Format Currency --- (No changes)
 function formatCurrency(number) { if (isNaN(number) || number === null) return "$0.00"; const num = parseFloat(number); if (isNaN(num)) return "$0.00"; return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num); }
