@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Excel Dashboard</title>
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Link to Stylesheet -->
     <link rel="stylesheet" href="style.css">
+    <!-- PWA Theme Color (Optional but recommended) -->
+    <meta name="theme-color" content="#005fb2">
 </head>
 <body>
 
@@ -24,8 +29,11 @@
             <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
         </div>
         <div class="filter-group">
-            <label for="titleFilter">Filter by Title:</label>
-            <select id="titleFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            <label for="storeFilter">Filter by Store:</label>
+            <small style="font-size: 0.8em; color: #5c5c5c; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
+            <select id="storeFilter" disabled multiple size="6">
+                <option value="ALL">-- All Stores --</option>
+            </select>
         </div>
     </div>
     <!-- End Filter Controls -->
@@ -66,7 +74,7 @@
          <p id="attachTableStatus" style="text-align: center; font-style: italic; margin-top: 10px;"></p>
     </div>
 
-    <!-- *** NEW: Share Results Section *** -->
+    <!-- Share Results Section -->
     <div id="shareSection" class="card share-container">
         <h3>Share Results via Email</h3>
         <div class="share-controls">
@@ -81,7 +89,8 @@
 
     <!-- Include Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js"></script>
+    <!-- Link to your main script -->
     <script src="script.js"></script>
 
 </body>
