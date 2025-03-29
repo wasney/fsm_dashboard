@@ -8,7 +8,7 @@ const urlsToCache = [
   'style.css',
   'script.js',
   'manifest.json',
-  'icons/icon.svg', // Added SVG icon path
+  'icons/icon.svg', // Path to your SVG icon
   // Add external libraries (use specific versions for better cache control)
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js' // Use specific version if possible, e.g., chart.js@4.4.1
@@ -26,20 +26,31 @@ self.addEventListener('install', event => {
             return fetch(url, { cache: 'reload' })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`Request failed for ${url}: ${response.statusText}`);
+                        // Log the error but don't necessarily fail the whole install
+                        // Sometimes external CDNs might be momentarily unavailable
+                        console.error(`Request failed for ${url}: ${response.statusText}`);
+                        // Optionally, you could throw an error here to fail the install
+                        // if a resource is absolutely critical:
+                        // throw new Error(`Request failed for ${url}: ${response.statusText}`);
+                        return Promise.resolve(); // Continue caching other files
                     }
                     return cache.put(url, response);
+                }).catch(fetchError => {
+                    console.error(`Fetch error for ${url}:`, fetchError);
+                    return Promise.resolve(); // Continue caching other files
                 });
         });
+        // Wait for all essential puts to complete
         return Promise.all(promises);
       })
       .then(() => {
         // Force the waiting service worker to become the active service worker.
-        console.log('[Service Worker] App shell cached, skipping waiting.');
+        console.log('[Service Worker] App shell caching attempted, skipping waiting.');
         return self.skipWaiting();
       })
       .catch(error => {
-         console.error('[Service Worker] Cache addAll/put failed during install:', error);
+         // This catch might handle errors from caches.open()
+         console.error('[Service Worker] Caching failed during install setup:', error);
       })
   );
 });
@@ -68,8 +79,9 @@ self.addEventListener('activate', event => {
 
 // Fetch event: Serve from cache first, fall back to network
 self.addEventListener('fetch', event => {
-  // Only handle GET requests for caching strategy
+  // Only handle GET requests for this caching strategy
   if (event.request.method !== 'GET') {
+      // Let non-GET requests pass through to the network
       return;
   }
 
@@ -77,36 +89,35 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
+        // Return response from cache if found
         if (response) {
           // console.log('[Service Worker] Found in cache:', event.request.url);
-          return response; // Serve from cache
+          return response;
         }
 
+        // If not in cache, fetch from network
         // console.log('[Service Worker] Not in cache, fetching from network:', event.request.url);
-        // Optional: Clone the request to store in cache later if needed
-        // const fetchRequest = event.request.clone();
-
         return fetch(event.request).then(
-             // Return the network response directly
              networkResponse => {
-                // Optional: Cache the newly fetched resource if needed
-                // Check if we received a valid response
-                // if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                //   return networkResponse;
-                // }
-                // const responseToCache = networkResponse.clone();
-                // caches.open(CACHE_NAME)
-                //   .then(cache => {
+                // Optionally cache the network response here if desired for future offline use.
+                // Be careful caching everything, especially if URLs change or have query params.
+                // Example:
+                // if (networkResponse && networkResponse.ok) {
+                //   const responseToCache = networkResponse.clone();
+                //   caches.open(CACHE_NAME).then(cache => {
                 //     cache.put(event.request, responseToCache);
                 //   });
+                // }
                 return networkResponse;
              }
-        );
-      })
-      .catch(error => {
-        console.error('[Service Worker] Fetch failed:', error);
-        // Optional: Return a fallback offline page/resource
-        // For example: return caches.match('/offline.html');
+        ).catch(error => {
+            // Handle network fetch errors
+            console.error('[Service Worker] Network fetch failed:', error, event.request.url);
+            // Optional: Return a custom offline fallback page/resource
+            // For example: if (event.request.mode === 'navigate') { // Only for page navigations
+            //                 return caches.match('/offline.html');
+            //             }
+        });
       })
   );
 });
