@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel Dashboard</title>
+    <!-- Updated Title Tag for browser tab -->
+    <title>FSM Dashboard</title>
     <!-- PWA Manifest Link -->
     <link rel="manifest" href="manifest.json">
     <!-- Link to Stylesheet -->
     <link rel="stylesheet" href="style.css">
-    <!-- PWA Theme Color (Optional but recommended) -->
-    <meta name="theme-color" content="#005fb2">
+    <!-- PWA Theme Color (Update if desired for dark mode, e.g., a dark grey) -->
+    <meta name="theme-color" content="#2c2c2c">
 </head>
 <body>
 
-    <h1>Excel Data Dashboard</h1>
+    <!-- **** UPDATED Heading **** -->
+    <h1>FSM Excel Visualization Dashboard</h1>
 
     <p>Upload an Excel file (.xlsx or .xls) containing store revenue data (uses data from Excel rows 2-62).</p>
 
@@ -30,7 +32,7 @@
         </div>
         <div class="filter-group">
             <label for="storeFilter">Filter by Store:</label>
-            <small style="font-size: 0.8em; color: #5c5c5c; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
+            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small> <!-- Adjusted color for dark mode -->
             <select id="storeFilter" disabled multiple size="6">
                 <option value="ALL">-- All Stores --</option>
             </select>
