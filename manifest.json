@@ -1,0 +1,17 @@
+{
+  "name": "FSM Excel Data Dashboard",
+  "short_name": "FSM Dash",
+  "description": "Analyze and visualize Excel spreadsheet data for FSMs.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f3f2f2",
+  "theme_color": "#005fb2",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
