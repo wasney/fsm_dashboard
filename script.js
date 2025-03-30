@@ -320,9 +320,12 @@ function formatCurrency(number) { if (isNaN(number) || number === null) return "
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // *** UPDATED PATH back to root ***
-    // Scope option is removed as the default '/' is now correct
-    navigator.serviceWorker.register('/sw.js')
+    // Use relative path from index.html (assuming both are in /fsm_dashboard/)
+    const swPath = './sw.js';
+    // Set scope to the base directory of the site
+    const swScope = '/fsm_dashboard/';
+
+    navigator.serviceWorker.register(swPath, { scope: swScope })
       .then(registration => {
         console.log('Service Worker registered successfully with scope: ', registration.scope);
       })
