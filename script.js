@@ -63,7 +63,7 @@ function handleFileSelect(event) {
             filterAndDisplayData();
             statusElement.textContent = `Successfully processed ${file.name}.${rowLimitMessage} Displaying data. Use filters to refine.`;
         } catch (error) {
-            console.error("Error processing Excel file:", error);
+            console.error("Error processing Excel file:", error); // Log the actual error object
             statusElement.textContent = `Error processing file: ${error.message}. Check console for details.`;
             clearDashboard();
         }
@@ -257,7 +257,7 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
         districtValueForDisplay, showCombinedDistrictRev,
         totalUnitsWithDFFiltered, totalUnitTargetFiltered,
         overallUnitAchievementFilteredPercent,
-        fullyFilteredData.length // Pass count here
+        fullyFilteredData.length // Pass count here *** THIS IS WHERE THE NEW ARG IS ADDED ***
     );
     displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasRepPmrData);
     displayTrainingStats(avgElite, postTrainValueForDisplay, countPostTrain, hasNonZeroElite);
@@ -310,6 +310,7 @@ function displayStoreDetails(details) {
         storeDetailsElement.innerHTML = html; storeDetailsElement.style.display = 'block'; summaryElement.style.marginTop = '0';
     } else { storeDetailsElement.innerHTML = ''; storeDetailsElement.style.display = 'none'; summaryElement.style.marginTop = '1rem'; }
 }
+
 function displaySummary(
     totalQtdTargetFiltered, totalRevenueWithDFFiltered,
     overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal,
@@ -318,7 +319,7 @@ function displaySummary(
     districtValueDecimal, showCombinedDistrictRev,
     totalUnitsWithDFFiltered, totalUnitTargetFiltered,
     overallUnitAchievementFilteredPercent,
-    filteredDataCount // Accept the count
+    filteredDataCount // *** ACCEPT the count parameter ***
 ) {
     const displayRevenueAchPercent = overallRevenueAchievementFilteredDecimal !== null ? formatPercentage(overallRevenueAchievementFilteredDecimal, 2) : 'N/A';
     const achievementBgColor = getAchievementHighlightColor(overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal);
@@ -328,10 +329,15 @@ function displaySummary(
     summaryElement.innerHTML = ` <h3>Filtered QTD Summary</h3> <p><strong>Total QTD Revenue Target:</strong> ${formatCurrency(totalQtdTargetFiltered)}</p> <p><strong>Total Revenue w/DF (QTD):</strong> ${formatCurrency(totalRevenueWithDFFiltered)}</p> <p><strong>Overall QTD Revenue Achievement:</strong> <span style="background-color: ${achievementBgColor}; padding: 2px 5px; border-radius: 3px;">${displayRevenueAchPercent}</span> ${territoryRevARUnfilteredDecimal !== null ? ` (Territory Benchmark: ${formatPercentage(territoryRevARUnfilteredDecimal, 2)})` : ''}</p> ${territoryHtml} ${districtHtml} <hr style="border-top: 1px solid #444; margin: 10px 0;"> <p><strong>Total Units w/ DF:</strong> ${totalUnitsWithDFFiltered.toLocaleString()}</p> <p><strong>Total Unit Target:</strong> ${totalUnitTargetFiltered.toLocaleString()}</p> <p><strong>Overall Unit Achievement:</strong> ${displayUnitAchPercent}</p> `;
     const hasSummaryData = overallRevenueAchievementFilteredDecimal !== null || territoryValueDecimal !== null || districtValueDecimal !== null || overallUnitAchievementFilteredPercent !== null || totalUnitsWithDFFiltered > 0 || totalUnitTargetFiltered > 0;
     summaryElement.style.textAlign = hasSummaryData ? 'left' : 'center';
-    // Use filteredDataCount in the conditions
-    if (!hasSummaryData && originalData.length > 0 && filteredDataCount > 0) { summaryElement.innerHTML += '<p style="font-style: italic; text-align: center;">N/A or missing data for summary calculations based on current filters.</p>'; }
-    else if (filteredDataCount === 0 && originalData.length > 0) { summaryElement.innerHTML = '<p style="font-style: italic; text-align: center;">No data matches filters for summary.</p>'; }
-    else if (originalData.length === 0) { summaryElement.innerHTML = 'Summary data will appear here...'; }
+
+    // *** CORRECTED conditions to use filteredDataCount ***
+    if (!hasSummaryData && originalData.length > 0 && filteredDataCount > 0) {
+         summaryElement.innerHTML += '<p style="font-style: italic; text-align: center;">N/A or missing data for summary calculations based on current filters.</p>';
+    } else if (filteredDataCount === 0 && originalData.length > 0) {
+         summaryElement.innerHTML = '<p style="font-style: italic; text-align: center;">No data matches filters for summary.</p>';
+    } else if (originalData.length === 0) {
+        summaryElement.innerHTML = 'Summary data will appear here...';
+    }
 }
 function displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasData) { if (hasData) { repSkillAchValue.textContent = formatPercentage(avgRepSkillAch, 1); vPmrAchValue.textContent = formatPercentage(avgVPmrAch, 1); repPmrSection.style.display = 'block'; } else { repPmrSection.style.display = 'none'; } }
 function displayTrainingStats(avgElite, postTrainScore, postTrainCount, hasNonZeroElite) { let showSection = false; if (avgElite !== null && hasNonZeroElite) { eliteValue.textContent = formatPercentage(avgElite, 1); eliteP.style.display = 'block'; showSection = true; } else { eliteP.style.display = 'none'; } if (postTrainScore !== null) { const avgLabel = postTrainCount > 1 ? " (Avg)" : ""; postTrainingScoreValue.textContent = postTrainScore.toFixed(1) + avgLabel; postTrainingP.style.display = 'block'; showSection = true; } else { postTrainingScoreValue.textContent = 'N/A'; postTrainingP.style.display = 'block'; } if (showSection || postTrainScore !== null) { trainingStatsSection.style.display = 'block'; } else { trainingStatsSection.style.display = 'none'; } }
