@@ -12,20 +12,16 @@
 
     <h1>FSM Excel Visualization Dashboard</h1>
 
-    <p>Upload an Excel file (.xlsx or .xls) containing store revenue data (uses data from Excel rows 2-62).</p>
+    <p>Upload an Excel file (.xlsx or .xls) containing store revenue data.</p> <!-- Removed row limit text -->
 
     <div class="input-area card">
         <label for="excelFile">Choose Excel File:</label>
         <input type="file" id="excelFile" accept=".xlsx, .xls" />
     </div>
 
-    <!-- Filter Controls Section -->
+    <!-- Filter Controls Section - REORDERED -->
     <div class="filter-controls card">
-        <div class="filter-group">
-            <label for="subchannelFilter">Filter by Subchannel:</label>
-            <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
-        </div>
-        <!-- **** NEW Territory Filter **** -->
+        <!-- Territory Filter -->
         <div class="filter-group">
             <label for="territoryFilter">Territory:</label>
             <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
@@ -33,7 +29,12 @@
                 <option value="ALL">-- All Territories --</option>
             </select>
         </div>
-        <!-- **** End NEW Territory Filter **** -->
+         <!-- Subchannel Filter -->
+        <div class="filter-group">
+            <label for="subchannelFilter">Filter by Subchannel:</label>
+            <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
+        </div>
+         <!-- Store Filter -->
         <div class="filter-group">
             <label for="storeFilter">Filter by Store:</label>
             <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
@@ -45,6 +46,12 @@
     <!-- End Filter Controls -->
 
     <p id="status">No file selected.</p>
+
+    <!-- **** NEW Store Details Section **** -->
+    <div id="storeDetailsSection" class="store-details-container card" style="display: none;">
+        <!-- Content will be populated by JS -->
+    </div>
+    <!-- **** End Store Details Section **** -->
 
     <!-- Placeholder for the summary data -->
     <div id="summaryData" class="summary-container card"></div>
@@ -65,12 +72,12 @@
 
     <!-- Placeholder for the Bar Chart -->
     <div class="chart-container card" id="lineChartContainer">
-        <canvas id="lineChartCanvas"></canvas> <!-- ID kept as lineChartCanvas for simplicity -->
+        <canvas id="lineChartCanvas"></canvas>
     </div>
 
     <!-- Placeholder for the Attach Rate Table -->
     <div class="table-container card" id="attachRateTableContainer">
-        <h2>Attach Rates</h2> <!-- Heading will be updated dynamically -->
+        <h2>Attach Rates</h2>
         <div class="table-wrapper">
              <table id="attachRateTable">
                 <thead><tr><th>Store</th><th>Tablet</th><th>PC</th><th>NC</th><th>TWS</th><th>WW</th><th>ME</th><th>NCME</th></tr></thead>
