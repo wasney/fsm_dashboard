@@ -320,8 +320,9 @@ function formatCurrency(number) { if (isNaN(number) || number === null) return "
 // --- PWA Service Worker Registration ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Register SW from the /fsm_dashboard/ path, but control the root scope '/'
-    navigator.serviceWorker.register('/fsm_dashboard/sw.js', { scope: '/' })
+    // *** UPDATED PATH back to root ***
+    // Scope option is removed as the default '/' is now correct
+    navigator.serviceWorker.register('/sw.js')
       .then(registration => {
         console.log('Service Worker registered successfully with scope: ', registration.scope);
       })
