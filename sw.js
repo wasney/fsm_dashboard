@@ -34,7 +34,14 @@ self.addEventListener('install', event => {
                         // throw new Error(`Request failed for ${url}: ${response.statusText}`);
                         return Promise.resolve(); // Continue caching other files
                     }
-                    return cache.put(url, response);
+                    // Check if response can be cached (e.g., avoid opaque responses if strict)
+                    // Basic check: Ensure we have a valid response to cache
+                    if(response.status === 200 || response.type === 'basic' || response.type === 'cors') {
+                         return cache.put(url, response);
+                    } else {
+                         console.warn(`Skipping caching for ${url} due to response status/type: ${response.status} / ${response.type}`);
+                         return Promise.resolve();
+                    }
                 }).catch(fetchError => {
                     console.error(`Fetch error for ${url}:`, fetchError);
                     return Promise.resolve(); // Continue caching other files
@@ -101,8 +108,8 @@ self.addEventListener('fetch', event => {
              networkResponse => {
                 // Optionally cache the network response here if desired for future offline use.
                 // Be careful caching everything, especially if URLs change or have query params.
-                // Example:
-                // if (networkResponse && networkResponse.ok) {
+                // Example: If you want to cache other successful GET requests dynamically:
+                // if (networkResponse && networkResponse.ok && networkResponse.type === 'basic') { // Only cache basic requests from your origin
                 //   const responseToCache = networkResponse.clone();
                 //   caches.open(CACHE_NAME).then(cache => {
                 //     cache.put(event.request, responseToCache);
@@ -115,8 +122,9 @@ self.addEventListener('fetch', event => {
             console.error('[Service Worker] Network fetch failed:', error, event.request.url);
             // Optional: Return a custom offline fallback page/resource
             // For example: if (event.request.mode === 'navigate') { // Only for page navigations
-            //                 return caches.match('/offline.html');
+            //                 return caches.match('/offline.html'); // Need to cache offline.html during install
             //             }
+            // If no fallback, the browser's default offline error will show.
         });
       })
   );
