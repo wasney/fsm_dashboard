@@ -12,7 +12,8 @@
 
     <h1>FSM Excel Visualization Dashboard</h1>
 
-    <p>Upload an Excel file (.xlsx or .xls) containing store revenue data.</p> <!-- Removed row limit text -->
+    <!-- **** ADDED class="upload-instructions" **** -->
+    <p class="upload-instructions">Upload an Excel file (.xlsx or .xls) containing store revenue data.</p>
 
     <div class="input-area card">
         <label for="excelFile">Choose Excel File:</label>
@@ -47,11 +48,10 @@
 
     <p id="status">No file selected.</p>
 
-    <!-- **** NEW Store Details Section **** -->
+    <!-- Store Details Section -->
     <div id="storeDetailsSection" class="store-details-container card" style="display: none;">
         <!-- Content will be populated by JS -->
     </div>
-    <!-- **** End Store Details Section **** -->
 
     <!-- Placeholder for the summary data -->
     <div id="summaryData" class="summary-container card"></div>
