@@ -1,17 +1,17 @@
 // sw.js - Basic Caching Service Worker
 
-const CACHE_NAME = 'fsm-dashboard-cache-v1'; // Updated cache name
-// List of files to cache immediately upon installation
+const CACHE_NAME = 'fsm-dashboard-cache-v1'; // Keep or update cache name as needed
+// List of files to cache immediately upon installation (Relative Paths)
 const urlsToCache = [
-  '.', // Represents index.html
-  'index.html',
-  'style.css',
-  'script.js',
-  'manifest.json',
-  'icons/icon.svg', // Path to your SVG icon
-  // Add external libraries (use specific versions for better cache control)
+  '.',             // Represents index.html within /fsm_dashboard/
+  'index.html',    // Relative to sw.js
+  'style.css',     // Relative to sw.js
+  'script.js',     // Relative to sw.js
+  'manifest.json', // Relative to sw.js
+  'icons/icon.svg',// Relative to sw.js (assumes icons folder inside fsm_dashboard)
+  // External libraries remain absolute
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js' // Use specific version if possible, e.g., chart.js@4.4.1
+  'https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js'
 ];
 
 // Install event: Cache the core assets
@@ -21,21 +21,14 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Caching app shell');
-        // Use fetch with cache: 'reload' to bypass browser cache during install
         const promises = urlsToCache.map(url => {
+            // For relative URLs, fetch respects the service worker's path
             return fetch(url, { cache: 'reload' })
                 .then(response => {
                     if (!response.ok) {
-                        // Log the error but don't necessarily fail the whole install
-                        // Sometimes external CDNs might be momentarily unavailable
                         console.error(`Request failed for ${url}: ${response.statusText}`);
-                        // Optionally, you could throw an error here to fail the install
-                        // if a resource is absolutely critical:
-                        // throw new Error(`Request failed for ${url}: ${response.statusText}`);
                         return Promise.resolve(); // Continue caching other files
                     }
-                    // Check if response can be cached (e.g., avoid opaque responses if strict)
-                    // Basic check: Ensure we have a valid response to cache
                     if(response.status === 200 || response.type === 'basic' || response.type === 'cors') {
                          return cache.put(url, response);
                     } else {
@@ -44,19 +37,16 @@ self.addEventListener('install', event => {
                     }
                 }).catch(fetchError => {
                     console.error(`Fetch error for ${url}:`, fetchError);
-                    return Promise.resolve(); // Continue caching other files
+                    return Promise.resolve();
                 });
         });
-        // Wait for all essential puts to complete
         return Promise.all(promises);
       })
       .then(() => {
-        // Force the waiting service worker to become the active service worker.
         console.log('[Service Worker] App shell caching attempted, skipping waiting.');
         return self.skipWaiting();
       })
       .catch(error => {
-         // This catch might handle errors from caches.open()
          console.error('[Service Worker] Caching failed during install setup:', error);
       })
   );
@@ -65,7 +55,7 @@ self.addEventListener('install', event => {
 // Activate event: Clean up old caches
 self.addEventListener('activate', event => {
   console.log('[Service Worker] Activate');
-  const cacheWhitelist = [CACHE_NAME]; // Keep only the current cache version
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -77,7 +67,6 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-         // Tell the active service worker to take control of the page immediately.
          console.log('[Service Worker] Claiming clients.');
          return self.clients.claim();
     })
@@ -86,45 +75,19 @@ self.addEventListener('activate', event => {
 
 // Fetch event: Serve from cache first, fall back to network
 self.addEventListener('fetch', event => {
-  // Only handle GET requests for this caching strategy
-  if (event.request.method !== 'GET') {
-      // Let non-GET requests pass through to the network
-      return;
-  }
-
-  // Cache-first strategy
+  if (event.request.method !== 'GET') { return; }
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Return response from cache if found
-        if (response) {
-          // console.log('[Service Worker] Found in cache:', event.request.url);
-          return response;
-        }
-
-        // If not in cache, fetch from network
-        // console.log('[Service Worker] Not in cache, fetching from network:', event.request.url);
-        return fetch(event.request).then(
-             networkResponse => {
-                // Optionally cache the network response here if desired for future offline use.
-                // Be careful caching everything, especially if URLs change or have query params.
-                // Example: If you want to cache other successful GET requests dynamically:
-                // if (networkResponse && networkResponse.ok && networkResponse.type === 'basic') { // Only cache basic requests from your origin
-                //   const responseToCache = networkResponse.clone();
-                //   caches.open(CACHE_NAME).then(cache => {
-                //     cache.put(event.request, responseToCache);
-                //   });
-                // }
+        if (response) { return response; } // Serve from cache
+        // Fetch from network
+        return fetch(event.request).then( networkResponse => {
+                // Optional: Cache dynamic GET requests here if needed
                 return networkResponse;
              }
         ).catch(error => {
-            // Handle network fetch errors
             console.error('[Service Worker] Network fetch failed:', error, event.request.url);
-            // Optional: Return a custom offline fallback page/resource
-            // For example: if (event.request.mode === 'navigate') { // Only for page navigations
-            //                 return caches.match('/offline.html'); // Need to cache offline.html during install
-            //             }
-            // If no fallback, the browser's default offline error will show.
+            // Optional: Return offline fallback
         });
       })
   );
