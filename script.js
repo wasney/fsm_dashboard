@@ -204,17 +204,13 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
     if (missingCols.length > 0) { console.warn("Required columns missing:", missingCols); if (!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: '; statusElement.textContent += ` Missing columns (${missingCols.slice(0,3).join(', ')}${missingCols.length > 3 ? '...' : ''}). Some sections/calculations may fail.`; }
 
     // Process FULLY Filtered Data
-    if (fullyFilteredData.length > 0) { // Check length before processing
-        // Process only if needed columns are present (basic check)
+    if (fullyFilteredData.length > 0) {
         const coreSummaryColsPresent = !missingCols.some(c => ['Revenue w/DF', 'QTD Revenue Target', 'Territory Rev%', 'District Rev%', 'Unit w/ DF', 'Unit Target'].includes(c));
         const conditionalStatsColsPresent = !missingCols.some(c => ['Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score'].includes(c));
 
         if (coreSummaryColsPresent) {
             fullyFilteredData.forEach(row => {
-                totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0);
-                totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0);
-                totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0);
-                totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0);
+                totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0); totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0); totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0); totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0);
                 if(conditionalStatsColsPresent) {
                     const repSkill = parsePercentage(row['Rep Skill Ach']); if (repSkill !== null) { sumRepSkill += repSkill; countRepSkill++; hasRepPmrData = true; }
                     const vPmr = parsePercentage(row['(V)PMR Ach']); if (vPmr !== null) { sumVPmr += vPmr; countVPmr++; hasRepPmrData = true; }
@@ -223,57 +219,28 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
                 }
             });
 
-            // Determine Conditional Values and Flags
             if (isSingleStoreSelected && fullyFilteredData.length === 1) {
-                const singleRow = fullyFilteredData[0];
-                territoryValueForDisplay = parsePercentage(singleRow['Territory Rev%']);
-                districtValueForDisplay = parsePercentage(singleRow['District Rev%']);
-                showCombinedTerritoryRev = false; // Show single label
-                showCombinedDistrictRev = false; // Show single label
-                // Populate Store Details Data only if single store selected AND core details columns present
-                const coreDetailColsPresent = !missingCols.some(c => ['Store', 'Q2 Territory', 'ORG_STORE_ID', 'STORE_NAME', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE'].includes(c)); // Basic check
-                 if (coreDetailColsPresent) {
-                    storeDetailsData = {}; allRequiredCols.forEach(col => storeDetailsData[col] = singleRow[col]); // Copy all needed details
-                 } else {
-                    storeDetailsData = null; // Cannot show details if core parts missing
-                    console.warn("Cannot display Store Details due to missing columns.");
-                 }
+                const singleRow = fullyFilteredData[0]; territoryValueForDisplay = parsePercentage(singleRow['Territory Rev%']); districtValueForDisplay = parsePercentage(singleRow['District Rev%']); showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
+                const coreDetailColsPresent = !missingCols.some(c => ['Store', 'Q2 Territory', 'ORG_STORE_ID', 'STORE_NAME', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE'].includes(c));
+                 if (coreDetailColsPresent) { storeDetailsData = {}; allRequiredCols.forEach(col => storeDetailsData[col] = singleRow[col]); }
+                 else { storeDetailsData = null; console.warn("Cannot display Store Details due to missing columns."); }
             } else if (!isAllStoresSelected && fullyFilteredData.length > 1) {
-                const firstTerritory = String(fullyFilteredData[0]['Q2 Territory'] || '').trim();
-                const allSameTerritory = fullyFilteredData.every(row => String(row['Q2 Territory'] || '').trim() === firstTerritory);
-                const firstDistrict = String(fullyFilteredData[0]['DISTRICT'] || '').trim();
-                const allSameDistrict = fullyFilteredData.every(row => String(row['DISTRICT'] || '').trim() === firstDistrict);
-
+                const firstTerritory = String(fullyFilteredData[0]['Q2 Territory'] || '').trim(); const allSameTerritory = fullyFilteredData.every(row => String(row['Q2 Territory'] || '').trim() === firstTerritory);
+                const firstDistrict = String(fullyFilteredData[0]['DISTRICT'] || '').trim(); const allSameDistrict = fullyFilteredData.every(row => String(row['DISTRICT'] || '').trim() === firstDistrict);
                 if (allSameTerritory && firstTerritory !== '') { let sumT = 0; let countT = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['Territory Rev%']); if (val !== null) { sumT += val; countT++; } }); territoryValueForDisplay = countT > 0 ? sumT : null; showCombinedTerritoryRev = true; }
                 else { territoryValueForDisplay = null; showCombinedTerritoryRev = false; }
-
                 if (allSameDistrict && firstDistrict !== '') { let sumD = 0; let countD = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['District Rev%']); if (val !== null) { sumD += val; countD++; } }); districtValueForDisplay = countD > 0 ? sumD : null; showCombinedDistrictRev = true; }
                 else { districtValueForDisplay = null; showCombinedDistrictRev = false; }
                 storeDetailsData = null;
-            } else { // All stores selected or implicitly one matched
-                 territoryValueForDisplay = null; districtValueForDisplay = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; storeDetailsData = null;
-            }
+            } else { territoryValueForDisplay = null; districtValueForDisplay = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; storeDetailsData = null; }
 
-             // Determine Post Training Score display value (can happen even if summary cols missing)
              if (conditionalStatsColsPresent) {
                 if (countPostTrain === 1 && fullyFilteredData.length === 1) { postTrainValueForDisplay = parseFloat(fullyFilteredData[0]['Post Training Score']); if(isNaN(postTrainValueForDisplay)) postTrainValueForDisplay = null; }
                 else if (countPostTrain > 0) { postTrainValueForDisplay = sumPostTrain / countPostTrain; }
              }
-        } else {
-            // Handle case where core summary columns are missing
-             console.warn("Core summary columns missing, cannot calculate summary stats.");
-             // Set values to null to ensure 'N/A' display
-             territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null;
-             showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
-        }
-    } else { // No data after filtering
-        territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null;
-        showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
-        countPostTrain = 0; // Ensure count is 0 for display logic
-    }
+        } else { console.warn("Core summary columns missing, cannot calculate summary stats."); territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; }
+    } else { territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; countPostTrain = 0; }
 
-
-    // Calculate OTHER Overall Averages/Totals (even if some cols missing, others might work)
     const overallRevenueAchievementFilteredDecimal = totalQtdTargetFiltered > 0 ? (totalRevenueWithDFFiltered / totalQtdTargetFiltered) : null;
     const overallUnitAchievementFilteredPercent = totalUnitTargetFiltered > 0 ? (totalUnitsWithDFFiltered / totalUnitTargetFiltered) * 100 : null;
     const avgRepSkillAch = countRepSkill > 0 ? sumRepSkill / countRepSkill : null;
@@ -294,7 +261,6 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
     if (dataForDetails.length > 0) {
         if (tableColsPresent) { attachRateColumns.forEach(colName => { attachRateStats[colName] = calculateColumnStats(dataForDetails, colName); }); }
         else { attachRateColumns.forEach(colName => { attachRateStats[colName] = { average: null, stdDev: null, count: 0 }; }); }
-
         dataForDetails.forEach((row, index) => {
             const storeLabel = (row['Store'] && String(row['Store']).trim()) || (row['STORE ID'] && String(row['STORE ID']).trim()) || `Unknown ${index + 1}`;
             if (chartColsPresent) { lineChartLabels.push(storeLabel); lineChartRevARData.push(parsePercentage(row['Rev AR%'])); lineChartUnitAchData.push(parsePercentage(row['Unit Achievement'])); }
@@ -352,4 +318,17 @@ function clearDashboard() { clearChart(); if (storeDetailsElement) { storeDetail
 function formatCurrency(number) { if (isNaN(number) || number === null) return "$0.00"; const num = parseFloat(number); if (isNaN(num)) return "$0.00"; return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num); }
 
 // --- PWA Service Worker Registration ---
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js') .then(registration => { console.log('Service Worker registered successfully with scope: ', registration.scope); }) .catch(error => { console.log('Service Worker registration failed: ', error); }); }); } else { console.log('Service Worker is not supported by this browser.'); }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Register SW from the /fsm_dashboard/ path, but control the root scope '/'
+    navigator.serviceWorker.register('/fsm_dashboard/sw.js', { scope: '/' })
+      .then(registration => {
+        console.log('Service Worker registered successfully with scope: ', registration.scope);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed: ', error);
+      });
+  });
+} else {
+    console.log('Service Worker is not supported by this browser.');
+}
