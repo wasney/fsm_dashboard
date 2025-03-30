@@ -3,18 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Updated Title Tag for browser tab -->
     <title>FSM Dashboard</title>
-    <!-- PWA Manifest Link -->
     <link rel="manifest" href="manifest.json">
-    <!-- Link to Stylesheet -->
     <link rel="stylesheet" href="style.css">
-    <!-- PWA Theme Color (Update if desired for dark mode, e.g., a dark grey) -->
     <meta name="theme-color" content="#2c2c2c">
 </head>
 <body>
 
-    <!-- **** UPDATED Heading **** -->
     <h1>FSM Excel Visualization Dashboard</h1>
 
     <p>Upload an Excel file (.xlsx or .xls) containing store revenue data (uses data from Excel rows 2-62).</p>
@@ -30,9 +25,18 @@
             <label for="subchannelFilter">Filter by Subchannel:</label>
             <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
         </div>
+        <!-- **** NEW Territory Filter **** -->
+        <div class="filter-group">
+            <label for="territoryFilter">Territory:</label>
+            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
+            <select id="territoryFilter" disabled multiple size="6">
+                <option value="ALL">-- All Territories --</option>
+            </select>
+        </div>
+        <!-- **** End NEW Territory Filter **** -->
         <div class="filter-group">
             <label for="storeFilter">Filter by Store:</label>
-            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small> <!-- Adjusted color for dark mode -->
+            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
             <select id="storeFilter" disabled multiple size="6">
                 <option value="ALL">-- All Stores --</option>
             </select>
@@ -59,14 +63,14 @@
         <p id="postTrainingP">Post Training Score: <span id="postTrainingScoreValue">N/A</span></p>
     </div>
 
-    <!-- Placeholder for the Line Chart -->
+    <!-- Placeholder for the Bar Chart -->
     <div class="chart-container card" id="lineChartContainer">
-        <canvas id="lineChartCanvas"></canvas>
+        <canvas id="lineChartCanvas"></canvas> <!-- ID kept as lineChartCanvas for simplicity -->
     </div>
 
     <!-- Placeholder for the Attach Rate Table -->
     <div class="table-container card" id="attachRateTableContainer">
-        <h2>Attach Rates (Subchannel Filtered)</h2>
+        <h2>Attach Rates</h2> <!-- Heading will be updated dynamically -->
         <div class="table-wrapper">
              <table id="attachRateTable">
                 <thead><tr><th>Store</th><th>Tablet</th><th>PC</th><th>NC</th><th>TWS</th><th>WW</th><th>ME</th><th>NCME</th></tr></thead>
@@ -92,7 +96,6 @@
     <!-- Include Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js"></script>
-    <!-- Link to your main script -->
     <script src="script.js"></script>
 
 </body>
