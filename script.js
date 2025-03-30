@@ -12,7 +12,7 @@ const attachRateTableBody = document.getElementById('attachRateTableBody');
 const attachRateTableContainer = document.getElementById('attachRateTableContainer');
 const attachRateTableHeading = attachRateTableContainer.querySelector('h2');
 const attachTableStatusElement = document.getElementById('attachTableStatus');
-const territoryFilter = document.getElementById('territoryFilter');
+const territoryFilter = document.getElementById('territoryFilter'); // Now first logically
 const subchannelFilter = document.getElementById('subchannelFilter');
 const storeFilter = document.getElementById('storeFilter');
 const repPmrSection = document.getElementById('repPmrSection');
@@ -30,7 +30,7 @@ const shareStatusElement = document.getElementById('shareStatus');
 
 // --- Event Listeners ---
 fileInput.addEventListener('change', handleFileSelect, false);
-territoryFilter.addEventListener('change', filterAndDisplayData);
+territoryFilter.addEventListener('change', filterAndDisplayData); // Add listener
 subchannelFilter.addEventListener('change', handleSubchannelChange);
 storeFilter.addEventListener('change', filterAndDisplayData);
 shareEmailButton.addEventListener('click', handleShareEmail);
@@ -41,7 +41,7 @@ function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) { statusElement.textContent = 'No file selected.'; clearDashboard(); return; }
     statusElement.textContent = `Processing file: ${file.name}...`;
-    console.warn("Processing all rows. This might be slow for very large files.");
+    console.warn("Processing all rows. This might be slow for very large files."); // Performance warning
     clearDashboard();
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -50,15 +50,23 @@ function handleFileSelect(event) {
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); // Use all rows
+            // Use all rows
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
             const rowLimitMessage = ` Processed all ${jsonData.length} data rows (Excel rows 2-${jsonData.length + 1}).`;
 
-            if (!jsonData || jsonData.length === 0) { statusElement.textContent = 'Error: No data found in the first sheet or file is empty.'; return; }
+            if (!jsonData || jsonData.length === 0) {
+                 statusElement.textContent = 'Error: No data found in the first sheet or file is empty.';
+                return;
+            }
             originalData = jsonData;
             populateFiltersOnInit(originalData);
             filterAndDisplayData();
             statusElement.textContent = `Successfully processed ${file.name}.${rowLimitMessage} Displaying data. Use filters to refine.`;
-        } catch (error) { console.error("Error processing Excel file:", error); statusElement.textContent = `Error processing file: ${error.message}. Check console for details.`; clearDashboard(); }
+        } catch (error) {
+            console.error("Error processing Excel file:", error);
+            statusElement.textContent = `Error processing file: ${error.message}. Check console for details.`;
+            clearDashboard();
+        }
     };
     reader.onerror = function(ex) { console.error("FileReader error:", ex); statusElement.textContent = 'Error reading file.'; clearDashboard(); };
     reader.readAsBinaryString(file);
@@ -66,22 +74,52 @@ function handleFileSelect(event) {
 
 // --- Filter Population Logic ---
 function populateFiltersOnInit(data) {
-    const subchannels = new Set(); const territories = new Set(); const stores = new Set();
+    const subchannels = new Set();
+    const territories = new Set();
+    const stores = new Set();
     let columnsPresent = true;
     const requiredFilterCols = ['SUB_CHANNEL', 'Q2 Territory', 'Store'];
-    if (data.length === 0 || !data[0]) { columnsPresent = false; }
-    else { requiredFilterCols.forEach(col => { if (data[0][col] === undefined) { columnsPresent = false; console.warn(`Filter column missing: ${col}`); if(!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: '; statusElement.textContent += ` Filter column '${col}' missing.`; } }); }
-    if (columnsPresent) { data.forEach(row => { if (row['SUB_CHANNEL'] && String(row['SUB_CHANNEL']).trim()) subchannels.add(String(row['SUB_CHANNEL']).trim()); if (row['Q2 Territory'] && String(row['Q2 Territory']).trim()) territories.add(String(row['Q2 Territory']).trim()); if (row['Store'] && String(row['Store']).trim()) stores.add(String(row['Store']).trim()); }); }
-    else { if(!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: Could not fully populate filters due to missing columns.'; }
-    updateDropdownOptions(territoryFilter, [...territories].sort(), 'Territory'); updateDropdownOptions(subchannelFilter, [...subchannels].sort(), 'Subchannel'); updateDropdownOptions(storeFilter, [...stores].sort(), 'Store');
-    resetMultiSelect(territoryFilter, 'ALL'); resetMultiSelect(storeFilter, 'ALL');
-    territoryFilter.disabled = !columnsPresent || territories.size === 0; subchannelFilter.disabled = !columnsPresent || subchannels.size === 0; storeFilter.disabled = !columnsPresent || stores.size === 0;
+
+    if (data.length === 0 || !data[0]) {
+        columnsPresent = false;
+    } else {
+        requiredFilterCols.forEach(col => {
+            if (data[0][col] === undefined) {
+                columnsPresent = false;
+                console.warn(`Filter column missing: ${col}`);
+                if(!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: ';
+                statusElement.textContent += ` Filter column '${col}' missing.`;
+            }
+        });
+    }
+
+    if (columnsPresent) {
+        data.forEach(row => {
+            if (row['SUB_CHANNEL'] && String(row['SUB_CHANNEL']).trim()) subchannels.add(String(row['SUB_CHANNEL']).trim());
+            if (row['Q2 Territory'] && String(row['Q2 Territory']).trim()) territories.add(String(row['Q2 Territory']).trim());
+            if (row['Store'] && String(row['Store']).trim()) stores.add(String(row['Store']).trim());
+        });
+    } else {
+         if(!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: Could not fully populate filters due to missing columns.';
+    }
+
+    updateDropdownOptions(territoryFilter, [...territories].sort(), 'Territory');
+    updateDropdownOptions(subchannelFilter, [...subchannels].sort(), 'Subchannel');
+    updateDropdownOptions(storeFilter, [...stores].sort(), 'Store');
+
+    resetMultiSelect(territoryFilter, 'ALL');
+    resetMultiSelect(storeFilter, 'ALL');
+    subchannelFilter.disabled = !columnsPresent || subchannels.size === 0;
+    territoryFilter.disabled = !columnsPresent || territories.size === 0;
+    storeFilter.disabled = !columnsPresent || stores.size === 0;
 }
 function updateDropdownOptions(selectElement, optionsArray, filterName) { const isMultiple = selectElement.multiple; selectElement.innerHTML = ''; const allOptionValue = 'ALL'; const allOptionText = `-- All ${filterName}s --`; selectElement.add(new Option(allOptionText, allOptionValue)); optionsArray.forEach(optionValue => { if (optionValue !== allOptionValue) { selectElement.add(new Option(optionValue, optionValue)); } }); if (!isMultiple) { selectElement.value = allOptionValue; } }
 function updateStoreFilterOptions() {
-    const selectedSubchannel = subchannelFilter.value; const relevantStores = new Set(); let dataToScan = originalData;
+    const selectedSubchannel = subchannelFilter.value;
+    const relevantStores = new Set();
+    let dataToScan = originalData;
     if (selectedSubchannel !== 'ALL') { dataToScan = dataToScan.filter(row => String(row['SUB_CHANNEL'] || '').trim() === selectedSubchannel); }
-    // Optional: Further filter dataToScan by selected Territories if needed
+    // TODO: Consider filtering stores by selected territory as well?
     if (dataToScan.length > 0 && dataToScan[0]['Store'] !== undefined) { dataToScan.forEach(row => { if (row['Store'] && String(row['Store']).trim()) relevantStores.add(String(row['Store']).trim()); }); }
     else if (originalData.length > 0 && (!originalData[0] || originalData[0]['Store'] === undefined)) { if (!statusElement.textContent.includes("Warning: 'Store' column")) statusElement.textContent += ` Warning: 'Store' column may be missing, Store filter cannot be updated.`; }
     updateDropdownOptions(storeFilter, [...relevantStores].sort(), 'Store'); resetMultiSelect(storeFilter, 'ALL');
@@ -95,6 +133,7 @@ function handleSubchannelChange() { updateStoreFilterOptions(); filterAndDisplay
 
 // --- Data Filtering and Display Trigger ---
 function filterAndDisplayData() {
+    // Read selections
     const selectedSubchannel = subchannelFilter.value;
     // Territory Filter Logic
     const selectedTerritoryOptions = Array.from(territoryFilter.selectedOptions); let selectedTerritories = selectedTerritoryOptions.map(option => option.value); const allTerritoriesOption = territoryFilter.querySelector('option[value="ALL"]'); const containsAllTerr = selectedTerritories.includes('ALL'); const containsIndividualTerr = selectedTerritories.some(val => val !== 'ALL');
@@ -152,7 +191,7 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
 
     // Define required columns
     const baseRequiredCols = ['Store', 'STORE ID', 'SUB_CHANNEL', 'Q2 Territory', 'Revenue w/DF', 'QTD Revenue Target', 'Territory Rev%', 'Unit w/ DF', 'Unit Target', 'Rev AR%', 'Unit Achievement', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score'];
-    const districtCols = ['DISTRICT', 'District Rev%']; // *** UPDATED to DISTRICT ***
+    const districtCols = ['DISTRICT', 'District Rev%'];
     const storeDetailCols = ['ORG_STORE_ID', 'STORE_NAME', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE', 'PHONE_NO', 'Q1 TERRITORY', 'FSM NAME', 'DEALER_NAME', 'CHANNEL_TYPE', 'SUPER STORE', 'GOLDEN RHINO', 'LATITUDE_ORG', 'LONGITUDE_ORG', 'RETAIL_MAP_OPP_TIER_NAME', 'CINGLEPOINT_ID', 'CHANNEL', 'Hispanic_Market', 'GCE', 'AI_Zone'];
     const attachRateColumns = ['Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'];
     const allRequiredCols = [...new Set([...baseRequiredCols, ...districtCols, ...storeDetailCols, ...attachRateColumns])];
@@ -165,41 +204,76 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
     if (missingCols.length > 0) { console.warn("Required columns missing:", missingCols); if (!statusElement.textContent.includes('Warning:')) statusElement.textContent += ' Warning: '; statusElement.textContent += ` Missing columns (${missingCols.slice(0,3).join(', ')}${missingCols.length > 3 ? '...' : ''}). Some sections/calculations may fail.`; }
 
     // Process FULLY Filtered Data
-    if (fullyFilteredData.length > 0 && missingCols.length === 0) { // Proceed only if core cols likely present
-        fullyFilteredData.forEach(row => {
-            totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0); totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0); totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0); totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0);
-            const repSkill = parsePercentage(row['Rep Skill Ach']); if (repSkill !== null) { sumRepSkill += repSkill; countRepSkill++; hasRepPmrData = true; }
-            const vPmr = parsePercentage(row['(V)PMR Ach']); if (vPmr !== null) { sumVPmr += vPmr; countVPmr++; hasRepPmrData = true; }
-            const elite = parsePercentage(row['Elite']); if (elite !== null) { sumElite += elite; countElite++; if (elite > 0.0001) hasNonZeroElite = true; }
-            const postTrainScore = parseFloat(row['Post Training Score']); if (!isNaN(postTrainScore)) { sumPostTrain += postTrainScore; countPostTrain++; }
-        });
+    if (fullyFilteredData.length > 0) { // Check length before processing
+        // Process only if needed columns are present (basic check)
+        const coreSummaryColsPresent = !missingCols.some(c => ['Revenue w/DF', 'QTD Revenue Target', 'Territory Rev%', 'District Rev%', 'Unit w/ DF', 'Unit Target'].includes(c));
+        const conditionalStatsColsPresent = !missingCols.some(c => ['Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score'].includes(c));
 
-        if (isSingleStoreSelected && fullyFilteredData.length === 1) {
-            const singleRow = fullyFilteredData[0];
-            territoryValueForDisplay = parsePercentage(singleRow['Territory Rev%']);
-            districtValueForDisplay = parsePercentage(singleRow['District Rev%']);
-            storeDetailsData = {}; allRequiredCols.forEach(col => storeDetailsData[col] = singleRow[col]); // Copy all needed details
-        } else if (!isAllStoresSelected && fullyFilteredData.length > 1) {
-            const firstTerritory = String(fullyFilteredData[0]['Q2 Territory'] || '').trim();
-            const allSameTerritory = fullyFilteredData.every(row => String(row['Q2 Territory'] || '').trim() === firstTerritory);
-             // *** UPDATED to DISTRICT ***
-            const firstDistrict = String(fullyFilteredData[0]['DISTRICT'] || '').trim();
-            const allSameDistrict = fullyFilteredData.every(row => String(row['DISTRICT'] || '').trim() === firstDistrict);
+        if (coreSummaryColsPresent) {
+            fullyFilteredData.forEach(row => {
+                totalQtdTargetFiltered += (parseFloat(row['QTD Revenue Target']) || 0);
+                totalRevenueWithDFFiltered += (parseFloat(row['Revenue w/DF']) || 0);
+                totalUnitsWithDFFiltered += (parseFloat(row['Unit w/ DF']) || 0);
+                totalUnitTargetFiltered += (parseFloat(row['Unit Target']) || 0);
+                if(conditionalStatsColsPresent) {
+                    const repSkill = parsePercentage(row['Rep Skill Ach']); if (repSkill !== null) { sumRepSkill += repSkill; countRepSkill++; hasRepPmrData = true; }
+                    const vPmr = parsePercentage(row['(V)PMR Ach']); if (vPmr !== null) { sumVPmr += vPmr; countVPmr++; hasRepPmrData = true; }
+                    const elite = parsePercentage(row['Elite']); if (elite !== null) { sumElite += elite; countElite++; if (elite > 0.0001) hasNonZeroElite = true; }
+                    const postTrainScore = parseFloat(row['Post Training Score']); if (!isNaN(postTrainScore)) { sumPostTrain += postTrainScore; countPostTrain++; }
+                }
+            });
 
-            if (allSameTerritory && firstTerritory !== '') { let sumT = 0; let countT = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['Territory Rev%']); if (val !== null) { sumT += val; countT++; } }); territoryValueForDisplay = countT > 0 ? sumT : null; showCombinedTerritoryRev = true; }
-            else { territoryValueForDisplay = null; showCombinedTerritoryRev = false; }
+            // Determine Conditional Values and Flags
+            if (isSingleStoreSelected && fullyFilteredData.length === 1) {
+                const singleRow = fullyFilteredData[0];
+                territoryValueForDisplay = parsePercentage(singleRow['Territory Rev%']);
+                districtValueForDisplay = parsePercentage(singleRow['District Rev%']);
+                showCombinedTerritoryRev = false; // Show single label
+                showCombinedDistrictRev = false; // Show single label
+                // Populate Store Details Data only if single store selected AND core details columns present
+                const coreDetailColsPresent = !missingCols.some(c => ['Store', 'Q2 Territory', 'ORG_STORE_ID', 'STORE_NAME', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE'].includes(c)); // Basic check
+                 if (coreDetailColsPresent) {
+                    storeDetailsData = {}; allRequiredCols.forEach(col => storeDetailsData[col] = singleRow[col]); // Copy all needed details
+                 } else {
+                    storeDetailsData = null; // Cannot show details if core parts missing
+                    console.warn("Cannot display Store Details due to missing columns.");
+                 }
+            } else if (!isAllStoresSelected && fullyFilteredData.length > 1) {
+                const firstTerritory = String(fullyFilteredData[0]['Q2 Territory'] || '').trim();
+                const allSameTerritory = fullyFilteredData.every(row => String(row['Q2 Territory'] || '').trim() === firstTerritory);
+                const firstDistrict = String(fullyFilteredData[0]['DISTRICT'] || '').trim();
+                const allSameDistrict = fullyFilteredData.every(row => String(row['DISTRICT'] || '').trim() === firstDistrict);
 
-            if (allSameDistrict && firstDistrict !== '') { let sumD = 0; let countD = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['District Rev%']); if (val !== null) { sumD += val; countD++; } }); districtValueForDisplay = countD > 0 ? sumD : null; showCombinedDistrictRev = true; }
-            else { districtValueForDisplay = null; showCombinedDistrictRev = false; }
-            storeDetailsData = null; // Hide details for multiple selections
-        } else { // All stores selected or implicitly only one matched
-             territoryValueForDisplay = null; districtValueForDisplay = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; storeDetailsData = null;
+                if (allSameTerritory && firstTerritory !== '') { let sumT = 0; let countT = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['Territory Rev%']); if (val !== null) { sumT += val; countT++; } }); territoryValueForDisplay = countT > 0 ? sumT : null; showCombinedTerritoryRev = true; }
+                else { territoryValueForDisplay = null; showCombinedTerritoryRev = false; }
+
+                if (allSameDistrict && firstDistrict !== '') { let sumD = 0; let countD = 0; fullyFilteredData.forEach(row => { const val = parsePercentage(row['District Rev%']); if (val !== null) { sumD += val; countD++; } }); districtValueForDisplay = countD > 0 ? sumD : null; showCombinedDistrictRev = true; }
+                else { districtValueForDisplay = null; showCombinedDistrictRev = false; }
+                storeDetailsData = null;
+            } else { // All stores selected or implicitly one matched
+                 territoryValueForDisplay = null; districtValueForDisplay = null; showCombinedTerritoryRev = false; showCombinedDistrictRev = false; storeDetailsData = null;
+            }
+
+             // Determine Post Training Score display value (can happen even if summary cols missing)
+             if (conditionalStatsColsPresent) {
+                if (countPostTrain === 1 && fullyFilteredData.length === 1) { postTrainValueForDisplay = parseFloat(fullyFilteredData[0]['Post Training Score']); if(isNaN(postTrainValueForDisplay)) postTrainValueForDisplay = null; }
+                else if (countPostTrain > 0) { postTrainValueForDisplay = sumPostTrain / countPostTrain; }
+             }
+        } else {
+            // Handle case where core summary columns are missing
+             console.warn("Core summary columns missing, cannot calculate summary stats.");
+             // Set values to null to ensure 'N/A' display
+             territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null;
+             showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
         }
-
-        if (countPostTrain === 1 && fullyFilteredData.length === 1) { postTrainValueForDisplay = parseFloat(fullyFilteredData[0]['Post Training Score']); if(isNaN(postTrainValueForDisplay)) postTrainValueForDisplay = null; }
-        else if (countPostTrain > 0) { postTrainValueForDisplay = sumPostTrain / countPostTrain; }
+    } else { // No data after filtering
+        territoryValueForDisplay = null; districtValueForDisplay = null; postTrainValueForDisplay = null; storeDetailsData = null;
+        showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
+        countPostTrain = 0; // Ensure count is 0 for display logic
     }
 
+
+    // Calculate OTHER Overall Averages/Totals (even if some cols missing, others might work)
     const overallRevenueAchievementFilteredDecimal = totalQtdTargetFiltered > 0 ? (totalRevenueWithDFFiltered / totalQtdTargetFiltered) : null;
     const overallUnitAchievementFilteredPercent = totalUnitTargetFiltered > 0 ? (totalUnitsWithDFFiltered / totalUnitTargetFiltered) * 100 : null;
     const avgRepSkillAch = countRepSkill > 0 ? sumRepSkill / countRepSkill : null;
@@ -214,13 +288,17 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
 
     // Process Data for Chart and Table
     const dataForDetails = isAllStoresSelected ? subchannelFilteredData : fullyFilteredData;
+    const chartColsPresent = !missingCols.some(c => ['Rev AR%', 'Unit Achievement', 'Store', 'STORE ID'].includes(c));
+    const tableColsPresent = !missingCols.some(c => attachRateColumns.includes(c) || ['Store', 'STORE ID'].includes(c));
+
     if (dataForDetails.length > 0) {
-        if (missingCols.length === 0 || !(missingCols.some(col => attachRateColumns.includes(col)))) { attachRateColumns.forEach(colName => { attachRateStats[colName] = calculateColumnStats(dataForDetails, colName); }); }
+        if (tableColsPresent) { attachRateColumns.forEach(colName => { attachRateStats[colName] = calculateColumnStats(dataForDetails, colName); }); }
         else { attachRateColumns.forEach(colName => { attachRateStats[colName] = { average: null, stdDev: null, count: 0 }; }); }
+
         dataForDetails.forEach((row, index) => {
             const storeLabel = (row['Store'] && String(row['Store']).trim()) || (row['STORE ID'] && String(row['STORE ID']).trim()) || `Unknown ${index + 1}`;
-            if (missingCols.length === 0 || !(missingCols.includes('Rev AR%') || missingCols.includes('Unit Achievement'))) { lineChartLabels.push(storeLabel); lineChartRevARData.push(parsePercentage(row['Rev AR%'])); lineChartUnitAchData.push(parsePercentage(row['Unit Achievement'])); }
-            if (missingCols.length === 0 || !(missingCols.some(col => attachRateColumns.includes(col)))) { const tableRow = { store: storeLabel }; attachRateColumns.forEach(col => tableRow[col] = row[col]); attachRateDataForTable.push(tableRow); }
+            if (chartColsPresent) { lineChartLabels.push(storeLabel); lineChartRevARData.push(parsePercentage(row['Rev AR%'])); lineChartUnitAchData.push(parsePercentage(row['Unit Achievement'])); }
+            if (tableColsPresent) { const tableRow = { store: storeLabel }; attachRateColumns.forEach(col => tableRow[col] = row[col]); attachRateDataForTable.push(tableRow); }
         });
     }
 
@@ -251,7 +329,7 @@ function displayStoreDetails(details) {
         if (q1Terr && q2Terr && q1Terr !== q2Terr) { addDetail('Previous Territory', q1Terr); }
         const fsmName = String(details['FSM NAME'] || '').trim(); const q2Display = fsmName ? `${q2Terr} (${fsmName})` : q2Terr; addDetail('Q2 Territory', q2Display);
         if (String(details['CHANNEL_TYPE'] || '').toLowerCase() === 'dealer') { addDetail('Dealer Name', details['DEALER_NAME']); }
-        if (String(details['CHANNEL'] || '').toLowerCase() === 'at&t') { addDetail('CinglePoint ID', details['CINGLEPOINT_ID']); } // Check exact value if needed
+        if (String(details['CHANNEL'] || '').toLowerCase() === 'at&t') { addDetail('CinglePoint ID', details['CINGLEPOINT_ID']); }
         addConditionalDetail('Super Store', details['SUPER STORE']); addConditionalDetail('Golden Rhino', details['GOLDEN RHINO']); addConditionalDetail('Hispanic Market', details['Hispanic_Market']); addConditionalDetail('GCE', details['GCE']); addConditionalDetail('AI Zone', details['AI_Zone']);
         addDetail('Latitude', details['LATITUDE_ORG']); addDetail('Longitude', details['LONGITUDE_ORG']); addDetail('Rank', details['RETAIL_MAP_OPP_TIER_NAME']);
         storeDetailsElement.innerHTML = html; storeDetailsElement.style.display = 'block'; summaryElement.style.marginTop = '0';
