@@ -222,7 +222,7 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
             if (isSingleStoreSelected && fullyFilteredData.length === 1) {
                 const singleRow = fullyFilteredData[0]; territoryValueForDisplay = parsePercentage(singleRow['Territory Rev%']); districtValueForDisplay = parsePercentage(singleRow['District Rev%']); showCombinedTerritoryRev = false; showCombinedDistrictRev = false;
                 const coreDetailColsPresent = !missingCols.some(c => ['Store', 'Q2 Territory', 'ORG_STORE_ID', 'STORE_NAME', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE'].includes(c));
-                 if (coreDetailColsPresent) { storeDetailsData = {}; allRequiredCols.forEach(col => storeDetailsData[col] = singleRow[col]); }
+                 if (coreDetailColsPresent) { storeDetailsData = {}; allRequiredCols.forEach(col => {if(singleRow.hasOwnProperty(col)) storeDetailsData[col] = singleRow[col];}); } // Copy only available details
                  else { storeDetailsData = null; console.warn("Cannot display Store Details due to missing columns."); }
             } else if (!isAllStoresSelected && fullyFilteredData.length > 1) {
                 const firstTerritory = String(fullyFilteredData[0]['Q2 Territory'] || '').trim(); const allSameTerritory = fullyFilteredData.every(row => String(row['Q2 Territory'] || '').trim() === firstTerritory);
@@ -257,7 +257,7 @@ function processAndDisplayData(fullyFilteredData, subchannelFilteredData, isSing
         districtValueForDisplay, showCombinedDistrictRev,
         totalUnitsWithDFFiltered, totalUnitTargetFiltered,
         overallUnitAchievementFilteredPercent,
-        fullyFilteredData.length // Pass count here *** THIS IS WHERE THE NEW ARG IS ADDED ***
+        fullyFilteredData.length // *** PASS COUNT HERE ***
     );
     displayRepPmrData(avgRepSkillAch, avgVPmrAch, hasRepPmrData);
     displayTrainingStats(avgElite, postTrainValueForDisplay, countPostTrain, hasNonZeroElite);
@@ -321,6 +321,9 @@ function displaySummary(
     overallUnitAchievementFilteredPercent,
     filteredDataCount // *** ACCEPT the count parameter ***
 ) {
+    // *** ADD LOGGING HERE ***
+    console.log("Inside displaySummary - filteredDataCount:", filteredDataCount, " Type:", typeof filteredDataCount);
+
     const displayRevenueAchPercent = overallRevenueAchievementFilteredDecimal !== null ? formatPercentage(overallRevenueAchievementFilteredDecimal, 2) : 'N/A';
     const achievementBgColor = getAchievementHighlightColor(overallRevenueAchievementFilteredDecimal, territoryRevARUnfilteredDecimal);
     let territoryHtml = ''; if (isSingleStoreSelected) { territoryHtml = `<p><strong>Territory Rev %:</strong> ${formatPercentage(territoryValueDecimal, 2)}</p>`; } else if (showCombinedTerritoryRev) { territoryHtml = `<p><strong>Combined Territory Rev %:</strong> ${formatPercentage(territoryValueDecimal, 2)}</p>`; }
