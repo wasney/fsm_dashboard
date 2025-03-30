@@ -1,7 +1,7 @@
 {
   "name": "FSM Excel Data Dashboard",
   "short_name": "FSM Dash",
-  "description": "Analyze and visualize Excel spreadsheet data for FSMs.",
+  "description": "Analyze and visualize Excel spreadsheet data for FSMs. :)",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#f3f2f2",
