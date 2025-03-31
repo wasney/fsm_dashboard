@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM Elements ---
     const excelFileInput = document.getElementById('excelFile');
-    const statusDiv = document.getElementById('status');
+    const statusDiv = document.getElementById('status'); // Reference to the moved status element
     const loadingIndicator = document.getElementById('loadingIndicator');
     const filterLoadingIndicator = document.getElementById('filterLoadingIndicator');
     const filterArea = document.getElementById('filterArea');
@@ -138,28 +138,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatCurrency = (value) => isNaN(value) ? 'N/A' : CURRENCY_FORMAT.format(value);
     const formatPercent = (value) => isNaN(value) ? 'N/A' : PERCENT_FORMAT.format(value);
     const formatNumber = (value) => isNaN(value) ? 'N/A' : NUMBER_FORMAT.format(value);
+
+    // Enhanced parsing to handle potentially null/empty values better
     const parseNumber = (value) => {
+        if (value === null || value === undefined || value === '') return NaN; // Treat blanks/nulls as NaN
         if (typeof value === 'number') return value;
         if (typeof value === 'string') {
             value = value.replace(/[$,%]/g, '');
             const num = parseFloat(value);
-            return isNaN(num) ? 0 : num;
+            return isNaN(num) ? NaN : num; // Return NaN if parsing fails
         }
-        return 0;
+        return NaN; // Default to NaN for other types
     };
     const parsePercent = (value) => {
-         if (typeof value === 'number') return value; // Assume it's already a decimal representation
+         if (value === null || value === undefined || value === '') return NaN; // Treat blanks/nulls as NaN
+         if (typeof value === 'number') return value; // Assume it's already decimal
          if (typeof value === 'string') {
             const num = parseFloat(value.replace('%', ''));
-            return isNaN(num) ? 0 : num / 100; // Convert percentage string to decimal
+            return isNaN(num) ? NaN : num / 100; // Convert to decimal, NaN if fails
          }
-         return 0;
+         return NaN; // Default to NaN
     };
     const safeGet = (obj, path, defaultValue = 'N/A') => {
         const value = obj ? obj[path] : undefined;
-        // Consider null/empty strings as potentially valid, adjust if needed
-        // Return defaultValue if value is null or undefined, but allow empty strings
         return (value !== undefined && value !== null) ? value : defaultValue;
+    };
+    // Helper to check if a value is valid for averaging (not null, not empty, parses to number)
+    const isValidForAverage = (value) => {
+         if (value === null || value === undefined || value === '') return false;
+         // Check if it parses to a number (handles both numbers and numeric strings)
+         return !isNaN(parseNumber(String(value).replace('%',''))); // Check parseNumber after removing % just in case
     };
     const getUniqueValues = (data, column) => {
         // Use safeGet with '' as default to handle potential missing values gracefully
@@ -308,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-     // NEW function to update store filter options based on other selections
+     // Updates store filter options based on other selections
      const updateStoreFilterOptionsBasedOnHierarchy = () => {
         if (rawData.length === 0) return; // No data loaded
 
@@ -479,13 +487,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // 5. Finalize UI state
-                statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`;
+                statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`; // Update status text
                 resultsArea.style.display = 'block';
                 exportCsvButton.disabled = filteredData.length === 0;
 
             } catch (error) {
                 console.error("Error applying filters:", error);
-                statusDiv.textContent = "Error applying filters. Check console for details.";
+                statusDiv.textContent = "Error applying filters. Check console for details."; // Update status text
                 filteredData = [];
                 resultsArea.style.display = 'none';
                  exportCsvButton.disabled = true;
@@ -550,22 +558,24 @@ document.addEventListener('DOMContentLoaded', () => {
          if(statusDiv) statusDiv.textContent = 'No file selected.'; // Reset status message
      };
 
+    // --- UPDATED updateSummary to exclude blanks from averages ---
     const updateSummary = (data) => {
-        const count = data.length;
-        if (count === 0) {
-            // Reset summary fields
-            const fields = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
-                            percentQuarterlyStoreTargetValue, revARValue, unitsWithDFValue, unitTargetValue,
-                            unitAchievementValue, visitCountValue, trainingCountValue, retailModeConnectivityValue,
-                            repSkillAchValue, vPmrAchValue, postTrainingScoreValue, eliteValue,
-                            percentQuarterlyTerritoryTargetValue, territoryRevPercentValue, districtRevPercentValue, regionRevPercentValue];
-            // Use optional chaining in case elements aren't found
-            fields.forEach(el => { if (el) el.textContent = 'N/A'; });
-            [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => { if(p) p.style.display = 'none';});
-            return;
+        const totalCount = data.length; // Total rows matching filters
+
+        // Clear summary fields first
+        const fieldsToClear = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
+                        percentQuarterlyStoreTargetValue, revARValue, unitsWithDFValue, unitTargetValue,
+                        unitAchievementValue, visitCountValue, trainingCountValue, retailModeConnectivityValue,
+                        repSkillAchValue, vPmrAchValue, postTrainingScoreValue, eliteValue,
+                        percentQuarterlyTerritoryTargetValue, territoryRevPercentValue, districtRevPercentValue, regionRevPercentValue];
+        fieldsToClear.forEach(el => { if (el) el.textContent = 'N/A'; });
+        [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => { if(p) p.style.display = 'none';});
+
+        if (totalCount === 0) {
+            return; // Nothing more to do if no data
         }
 
-        // Calculate sums and averages (ensure safeGet returns 0 for calculations if value is missing/null)
+        // --- Calculate SUMS (These generally include all filtered rows) ---
         const sumRevenue = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Revenue w/DF', 0)), 0);
         const sumQtdTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'QTD Revenue Target', 0)), 0);
         const sumQuarterlyTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Quarterly Revenue Target', 0)), 0);
@@ -573,88 +583,135 @@ document.addEventListener('DOMContentLoaded', () => {
         const sumUnitTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Unit Target', 0)), 0);
         const sumVisits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Visit count', 0)), 0);
         const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
-        const sumConnectivity = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Retail Mode Connectivity', 0)), 0);
-        const sumRepSkill = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Rep Skill Ach', 0)), 0);
-        const sumPmr = data.reduce((sum, row) => sum + parsePercent(safeGet(row, '(V)PMR Ach', 0)), 0);
-        const sumPostTraining = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Post Training Score', 0)), 0); // Assuming score is number, not %
-        const sumElite = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Elite', 0)), 0);
-        const sumRevAR = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Rev AR%', 0)), 0);
 
-        // Calculate overall percentages
+        // --- Calculate AVERAGES (excluding blanks/invalid values) ---
+        let sumRevAR = 0, countRevAR = 0;
+        let sumConnectivity = 0, countConnectivity = 0;
+        let sumRepSkill = 0, countRepSkill = 0;
+        let sumPmr = 0, countPmr = 0;
+        let sumPostTraining = 0, countPostTraining = 0;
+        let sumElite = 0, countElite = 0;
+
+        data.forEach(row => {
+            let val;
+            // Rev AR%
+            val = safeGet(row, 'Rev AR%', null);
+            if (isValidForAverage(val)) { sumRevAR += parsePercent(val); countRevAR++; }
+            // Retail Mode Connectivity
+            val = safeGet(row, 'Retail Mode Connectivity', null);
+            if (isValidForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
+            // Rep Skill Ach
+            val = safeGet(row, 'Rep Skill Ach', null);
+            if (isValidForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
+            // (V)PMR Ach
+            val = safeGet(row, '(V)PMR Ach', null);
+            if (isValidForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
+            // Post Training Score
+            val = safeGet(row, 'Post Training Score', null);
+            if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; } // Use parseNumber
+            // Elite
+            val = safeGet(row, 'Elite', null);
+            if (isValidForAverage(val)) { sumElite += parsePercent(val); countElite++; }
+        });
+
+        const avgRevAR = countRevAR === 0 ? NaN : sumRevAR / countRevAR;
+        const avgConnectivity = countConnectivity === 0 ? NaN : sumConnectivity / countConnectivity;
+        const avgRepSkill = countRepSkill === 0 ? NaN : sumRepSkill / countRepSkill;
+        const avgPmr = countPmr === 0 ? NaN : sumPmr / countPmr;
+        const avgPostTraining = countPostTraining === 0 ? NaN : sumPostTraining / countPostTraining;
+        const avgElite = countElite === 0 ? NaN : sumElite / countElite;
+
+        // --- Calculate Overall Percentages (based on SUMS) ---
         const overallPercentStoreTarget = sumQuarterlyTarget === 0 ? 0 : sumRevenue / sumQuarterlyTarget;
         const overallUnitAchievement = sumUnitTarget === 0 ? 0 : sumUnits / sumUnitTarget;
 
-        // Update DOM elements safely using optional chaining
+        // --- Update DOM Elements (safely using optional chaining) ---
+        // Sums
         revenueWithDFValue && (revenueWithDFValue.textContent = formatCurrency(sumRevenue));
-        revenueWithDFValue && (revenueWithDFValue.title = `Sum of 'Revenue w/DF' for ${count} stores`);
+        revenueWithDFValue && (revenueWithDFValue.title = `Sum of 'Revenue w/DF' for ${totalCount} filtered stores`);
         qtdRevenueTargetValue && (qtdRevenueTargetValue.textContent = formatCurrency(sumQtdTarget));
-        qtdRevenueTargetValue && (qtdRevenueTargetValue.title = `Sum of 'QTD Revenue Target' for ${count} stores`);
+        qtdRevenueTargetValue && (qtdRevenueTargetValue.title = `Sum of 'QTD Revenue Target' for ${totalCount} filtered stores`);
         qtdGapValue && (qtdGapValue.textContent = formatCurrency(sumRevenue - sumQtdTarget));
-        qtdGapValue && (qtdGapValue.title = `Calculated Gap (Total Revenue - QTD Target) for ${count} stores`);
+        qtdGapValue && (qtdGapValue.title = `Calculated Gap (Total Revenue - QTD Target) for ${totalCount} filtered stores`);
         quarterlyRevenueTargetValue && (quarterlyRevenueTargetValue.textContent = formatCurrency(sumQuarterlyTarget));
-        quarterlyRevenueTargetValue && (quarterlyRevenueTargetValue.title = `Sum of 'Quarterly Revenue Target' for ${count} stores`);
+        quarterlyRevenueTargetValue && (quarterlyRevenueTargetValue.title = `Sum of 'Quarterly Revenue Target' for ${totalCount} filtered stores`);
+        unitsWithDFValue && (unitsWithDFValue.textContent = formatNumber(sumUnits));
+        unitsWithDFValue && (unitsWithDFValue.title = `Sum of 'Unit w/ DF' for ${totalCount} filtered stores`);
+        unitTargetValue && (unitTargetValue.textContent = formatNumber(sumUnitTarget));
+        unitTargetValue && (unitTargetValue.title = `Sum of 'Unit Target' for ${totalCount} filtered stores`);
+        visitCountValue && (visitCountValue.textContent = formatNumber(sumVisits));
+        visitCountValue && (visitCountValue.title = `Sum of 'Visit count' for ${totalCount} filtered stores`);
+        trainingCountValue && (trainingCountValue.textContent = formatNumber(sumTrainings));
+        trainingCountValue && (trainingCountValue.title = `Sum of 'Trainings' for ${totalCount} filtered stores`);
 
+        // Overall % based on Sums
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.textContent = formatPercent(overallPercentStoreTarget));
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.title = `Overall % Quarterly Target (Total Revenue / Total Quarterly Target)`);
-
-        revARValue && (revARValue.textContent = formatPercent(sumRevAR / count)); // Average Rev AR%
-        revARValue && (revARValue.title = `Average 'Rev AR%' across ${count} stores`);
-
-        unitsWithDFValue && (unitsWithDFValue.textContent = formatNumber(sumUnits));
-        unitsWithDFValue && (unitsWithDFValue.title = `Sum of 'Unit w/ DF' for ${count} stores`);
-        unitTargetValue && (unitTargetValue.textContent = formatNumber(sumUnitTarget));
-        unitTargetValue && (unitTargetValue.title = `Sum of 'Unit Target' for ${count} stores`);
         unitAchievementValue && (unitAchievementValue.textContent = formatPercent(overallUnitAchievement));
         unitAchievementValue && (unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`);
 
-        visitCountValue && (visitCountValue.textContent = formatNumber(sumVisits));
-        visitCountValue && (visitCountValue.title = `Sum of 'Visit count' for ${count} stores`);
-        trainingCountValue && (trainingCountValue.textContent = formatNumber(sumTrainings));
-        trainingCountValue && (trainingCountValue.title = `Sum of 'Trainings' for ${count} stores`);
-        retailModeConnectivityValue && (retailModeConnectivityValue.textContent = formatPercent(sumConnectivity / count));
-        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${count} stores`);
+        // Averages (showing count of valid entries in title)
+        revARValue && (revARValue.textContent = formatPercent(avgRevAR));
+        revARValue && (revARValue.title = `Average 'Rev AR%' across ${countRevAR} stores with data`);
+        retailModeConnectivityValue && (retailModeConnectivityValue.textContent = formatPercent(avgConnectivity));
+        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with data`);
+        repSkillAchValue && (repSkillAchValue.textContent = formatPercent(avgRepSkill));
+        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with data`);
+        vPmrAchValue && (vPmrAchValue.textContent = formatPercent(avgPmr));
+        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with data`);
+        postTrainingScoreValue && (postTrainingScoreValue.textContent = formatNumber(avgPostTraining.toFixed(1))); // Keep formatting
+        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`);
+        eliteValue && (eliteValue.textContent = formatPercent(avgElite));
+        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`);
 
-        repSkillAchValue && (repSkillAchValue.textContent = formatPercent(sumRepSkill / count));
-        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${count} stores`);
-        vPmrAchValue && (vPmrAchValue.textContent = formatPercent(sumPmr / count));
-        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${count} stores`);
-        postTrainingScoreValue && (postTrainingScoreValue.textContent = formatNumber((sumPostTraining / count).toFixed(1))); // Avg score, 1 decimal
-        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${count} stores`);
-        eliteValue && (eliteValue.textContent = formatPercent(sumElite / count));
-        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${count} stores`);
-
-        // Contextual Hierarchy Percentages
+        // Contextual Hierarchy Percentages (Recalculate averages excluding blanks here too)
         updateContextualSummary(data);
     };
 
+    // --- UPDATED updateContextualSummary to exclude blanks from averages ---
     const updateContextualSummary = (data) => {
         // Hide all contextual fields initially safely
         [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
 
         if (data.length === 0) return;
 
-        // Calculate average contribution percentages IF the filter scope makes sense
         const singleRegion = regionFilter.value !== 'ALL';
         const singleDistrict = districtFilter.value !== 'ALL';
         const singleTerritory = territoryFilter.selectedOptions.length === 1;
 
-        // We can always calculate the average % of Territory Target contribution
-        const avgPercentTerritoryTarget = data.reduce((sum, row) => sum + parsePercent(safeGet(row, '%Quarterly Territory Rev Target', 0)), 0) / data.length;
+        // Helper function to calculate average excluding blanks for a specific column
+        const calculateAverageExcludeBlanks = (column) => {
+            let sum = 0;
+            let count = 0;
+            data.forEach(row => {
+                const val = safeGet(row, column, null);
+                if (isValidForAverage(val)) {
+                    sum += parsePercent(val); // Assuming these are percentages
+                    count++;
+                }
+            });
+            return count === 0 ? NaN : sum / count;
+        };
+
+        // Calculate averages excluding blanks
+        const avgPercentTerritoryTarget = calculateAverageExcludeBlanks('%Quarterly Territory Rev Target');
+        const avgTerritoryRevPercent = calculateAverageExcludeBlanks('Territory Rev%');
+        const avgDistrictRevPercent = calculateAverageExcludeBlanks('District Rev%');
+        const avgRegionRevPercent = calculateAverageExcludeBlanks('Region Rev%');
+
+        // Update DOM
         if (percentQuarterlyTerritoryTargetValue) percentQuarterlyTerritoryTargetValue.textContent = formatPercent(avgPercentTerritoryTarget);
-        if (percentQuarterlyTerritoryTargetP) percentQuarterlyTerritoryTargetP.style.display = 'block'; // Show this one generally
+        if (percentQuarterlyTerritoryTargetP) percentQuarterlyTerritoryTargetP.style.display = 'block';
 
         if (singleTerritory || singleDistrict || singleRegion) {
-             const avgTerritoryRevPercent = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Territory Rev%', 0)), 0) / data.length;
              if (territoryRevPercentValue) territoryRevPercentValue.textContent = formatPercent(avgTerritoryRevPercent);
              if (territoryRevPercentP) territoryRevPercentP.style.display = 'block';
         }
         if (singleDistrict || singleRegion) {
-             const avgDistrictRevPercent = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'District Rev%', 0)), 0) / data.length;
              if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent);
              if (districtRevPercentP) districtRevPercentP.style.display = 'block';
         }
          if (singleRegion) {
-             const avgRegionRevPercent = data.reduce((sum, row) => sum + parsePercent(safeGet(row, 'Region Rev%', 0)), 0) / data.length;
              if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent);
              if (regionRevPercentP) regionRevPercentP.style.display = 'block';
          }
@@ -769,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // --- UPDATED updateAttachRateTable to exclude blanks from footer average ---
     const updateAttachRateTable = (data) => {
         if (!attachRateTableBody || !attachRateTableFooter) return; // Exit if elements don't exist
         attachRateTableBody.innerHTML = '';
@@ -807,18 +865,25 @@ document.addEventListener('DOMContentLoaded', () => {
          });
 
 
-        // Calculate averages for highlighting (handle potential division by zero)
-        const count = data.length;
-        const averages = {
-             'Tablet Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'Tablet Attach Rate', 0)), 0) / count,
-             'PC Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'PC Attach Rate', 0)), 0) / count,
-             'NC Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'NC Attach Rate', 0)), 0) / count,
-             'TWS Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'TWS Attach Rate', 0)), 0) / count,
-             'WW Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'WW Attach Rate', 0)), 0) / count,
-             'ME Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'ME Attach Rate', 0)), 0) / count,
-             'NCME Attach Rate': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, 'NCME Attach Rate', 0)), 0) / count,
-             '% Quarterly Revenue Target': count === 0 ? 0 : data.reduce((sum, r) => sum + parsePercent(safeGet(r, '% Quarterly Revenue Target', 0)), 0) / count,
-        };
+        // Calculate averages for highlighting AND footer (excluding blanks)
+        const averageMetrics = [
+             '% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
+             'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
+        ];
+        const averages = {};
+        averageMetrics.forEach(key => {
+             let sum = 0;
+             let count = 0;
+             data.forEach(row => {
+                 const val = safeGet(row, key, null);
+                 if (isValidForAverage(val)) {
+                     sum += parsePercent(val); // Assuming all these are percentages
+                     count++;
+                 }
+             });
+             averages[key] = count === 0 ? NaN : sum / count;
+         });
+
 
         sortedData.forEach(row => {
             const tr = document.createElement('tr');
@@ -848,21 +913,24 @@ document.addEventListener('DOMContentLoaded', () => {
                      const rawValue = safeGet(row, col.key, null); // Get raw value safely
                      // Determine if parsing as percent is needed
                      const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('%');
-                     const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue); // Use number for non-% too
+                     // Use parsePercent for percent-like columns, parseNumber otherwise, to get numeric value for comparison
+                     const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue);
 
                      let formattedValue;
+                     // Display N/A if raw value is null or resulted in NaN (except Store column)
                      if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue))) {
-                         formattedValue = 'N/A'; // Display N/A if original is null or parsing fails (except for Store name)
+                         formattedValue = 'N/A';
                      } else {
-                         // If it's the Store column, use the rawValue directly. Otherwise format.
-                         formattedValue = (col.key === 'Store') ? rawValue : col.format(isPercentCol ? numericValue : rawValue);
+                         // Format the numeric value if percent, otherwise use raw (which might be string like Store name)
+                         formattedValue = isPercentCol ? col.format(numericValue) : rawValue;
                      }
+
 
                      td.textContent = formattedValue;
                      td.title = `${col.key}: ${formattedValue}`; // Add tooltip
 
                      // Apply highlighting based on average (only if value is numeric)
-                     if (col.highlight && averages[col.key] !== undefined && !isNaN(numericValue) && rawValue !== null) {
+                     if (col.highlight && averages[col.key] !== undefined && !isNaN(numericValue)) {
                           if (numericValue >= averages[col.key]) {
                               td.classList.add('highlight-green');
                           } else {
@@ -876,27 +944,29 @@ document.addEventListener('DOMContentLoaded', () => {
              } // End if(storeName)
         });
 
-        // Add Average Row to Footer
-        if (count > 0) {
+        // Add Average Row to Footer using calculated averages (which exclude blanks)
+        if (data.length > 0) { // Check if there was any data to calculate averages from
             const footerRow = attachRateTableFooter.insertRow();
-            footerRow.insertCell().textContent = 'Filtered Avg';
-            footerRow.cells[0].style.textAlign = "right";
-            footerRow.cells[0].style.fontWeight = "bold";
+            const avgLabelCell = footerRow.insertCell();
+            avgLabelCell.textContent = 'Filtered Avg*'; // Add asterisk note
+            avgLabelCell.title = 'Average calculated only using stores with valid data for each column';
+            avgLabelCell.style.textAlign = "right";
+            avgLabelCell.style.fontWeight = "bold";
 
-            const footerColumns = [
-                '% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
-                 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
-            ];
-             footerColumns.forEach(key => {
+            // Use the same metrics keys used for calculation
+            averageMetrics.forEach(key => {
                  const td = footerRow.insertCell();
-                 const avgValue = averages[key];
-                 td.textContent = formatPercent(avgValue);
-                 td.title = `Average ${key}: ${formatPercent(avgValue)}`;
+                 const avgValue = averages[key]; // Already calculated excluding blanks
+                 td.textContent = formatPercent(avgValue); // Format the calculated average
+                 // Count valid entries for tooltip
+                 let validCount = 0;
+                 data.forEach(row => { if (isValidForAverage(safeGet(row, key, null))) validCount++; });
+                 td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`;
                  td.style.textAlign = "right";
              });
          }
 
-        if(attachTableStatus) attachTableStatus.textContent = `Showing ${count} stores. Click row for details. Click headers to sort.`;
+        if(attachTableStatus) attachTableStatus.textContent = `Showing ${sortedData.length} stores. Click row for details. Click headers to sort.`;
         updateSortArrows();
     };
 
@@ -1095,11 +1165,13 @@ document.addEventListener('DOMContentLoaded', () => {
         body += `- Unit Achievement %: ${unitAchievementValue?.textContent || 'N/A'}\n`;
         body += `- Total Visits: ${visitCountValue?.textContent || 'N/A'}\n`;
         body += `- Avg. Connectivity: ${retailModeConnectivityValue?.textContent || 'N/A'}\n\n`;
-        body += "Mysteryshop & Training (Avg):\n";
+        body += "Mysteryshop & Training (Avg*):\n"; // Added asterisk note
         body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`;
         body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`;
         body += `- Post Training Score: ${postTrainingScoreValue?.textContent || 'N/A'}\n`;
         body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'}\n\n`;
+        body += "*Averages calculated only using stores with valid data for each metric.\n\n";
+
 
         // Use current sort order from the table for top stores
          const sortedFilteredData = [...filteredData].sort((a, b) => {

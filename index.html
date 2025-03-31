@@ -20,7 +20,8 @@
         <div id="loadingIndicator" style="display: none;">
             <div class="spinner"></div> Processing file...
         </div>
-        <p id="status">No file selected.</p>
+        <!-- Status message moved below filters -->
+        <!-- <p id="status">No file selected.</p> -->
     </div>
 
     <!-- Filter Controls Section - EXPANDED & REORDERED -->
@@ -100,6 +101,9 @@
     </div>
     <!-- End Filter Controls -->
 
+    <!-- Status message MOVED HERE -->
+    <p id="status" class="status-message">No file selected.</p>
+
     <!-- Combined Data Section -->
     <div id="resultsArea" class="results-container" style="display: none;">
 
@@ -115,43 +119,43 @@
             <h3>Performance Summary (Filtered)</h3>
              <div class="summary-grid">
                  <!-- Revenue -->
-                <p title="Revenue including Direct Fulfilled devices">Total Revenue (incl. DF): <strong id="revenueWithDFValue">N/A</strong></p>
-                <p>QTD Revenue Target: <strong id="qtdRevenueTargetValue">N/A</strong></p>
-                <p title="Gap between QTD Revenue Target and Total Revenue (incl. DF)">QTD Gap: <strong id="qtdGapValue">N/A</strong></p>
-                <p>Full Quarter Target: <strong id="quarterlyRevenueTargetValue">N/A</strong></p>
-                <p title="Percentage obtained of the store's Quarterly Revenue Target">% Store Quarterly Target: <strong id="percentQuarterlyStoreTargetValue">N/A</strong></p>
-                <p title="Revenue Achievement Rate %">Rev AR%: <strong id="revARValue">N/A</strong></p>
+                <p title="Sum of 'Revenue w/DF' for filtered stores">Total Revenue (incl. DF): <strong id="revenueWithDFValue">N/A</strong></p>
+                <p title="Sum of 'QTD Revenue Target' for filtered stores">QTD Revenue Target: <strong id="qtdRevenueTargetValue">N/A</strong></p>
+                <p title="Calculated Gap (Total Revenue - QTD Target) for filtered stores">QTD Gap: <strong id="qtdGapValue">N/A</strong></p>
+                <p title="Sum of 'Quarterly Revenue Target' for filtered stores">Full Quarter Target: <strong id="quarterlyRevenueTargetValue">N/A</strong></p>
+                <p title="Overall % Quarterly Target (Total Revenue / Total Quarterly Target)">% Store Quarterly Target: <strong id="percentQuarterlyStoreTargetValue">N/A</strong></p>
+                <p title="Average 'Rev AR%' across stores with data">Rev AR%: <strong id="revARValue">N/A</strong></p>
 
                  <!-- Units -->
-                <p title="Units including Direct Fulfilled devices">Total Units (incl. DF): <strong id="unitsWithDFValue">N/A</strong></p>
-                <p>Unit Target: <strong id="unitTargetValue">N/A</strong></p>
-                <p>Unit Achievement %: <strong id="unitAchievementValue">N/A</strong></p>
+                <p title="Sum of 'Unit w/ DF' for filtered stores">Total Units (incl. DF): <strong id="unitsWithDFValue">N/A</strong></p>
+                <p title="Sum of 'Unit Target' for filtered stores">Unit Target: <strong id="unitTargetValue">N/A</strong></p>
+                <p title="Overall Unit Achievement % (Total Units / Total Unit Target)">Unit Achievement %: <strong id="unitAchievementValue">N/A</strong></p>
 
                  <!-- Operational -->
-                <p>Total Visits: <strong id="visitCountValue">N/A</strong></p>
-                <p>Total Trainings: <strong id="trainingCountValue">N/A</strong></p>
-                <p title="Average percentage of demo devices connected across filtered stores">Avg. Retail Mode Connectivity: <strong id="retailModeConnectivityValue">N/A</strong></p>
+                <p title="Sum of 'Visit count' for filtered stores">Total Visits: <strong id="visitCountValue">N/A</strong></p>
+                <p title="Sum of 'Trainings' for filtered stores">Total Trainings: <strong id="trainingCountValue">N/A</strong></p>
+                <p title="Average 'Retail Mode Connectivity' across stores with data">Avg. Retail Mode Connectivity: <strong id="retailModeConnectivityValue">N/A</strong></p>
 
                  <!-- Hierarchy Contributions (Contextual) -->
-                 <p id="percentQuarterlyTerritoryTargetP" style="display: none;" title="Percentage obtained of the Territory's Quarterly Revenue Target provided by filtered stores">% Territory Quarterly Target: <strong id="percentQuarterlyTerritoryTargetValue">N/A</strong></p>
-                 <p id="territoryRevPercentP" style="display: none;" title="Percentage of the Territory's QTD Revenue target provided by filtered stores">Territory Rev Contrib %: <strong id="territoryRevPercentValue">N/A</strong></p>
-                 <p id="districtRevPercentP" style="display: none;" title="Percentage of the District's QTD Revenue target provided by filtered stores">District Rev Contrib %: <strong id="districtRevPercentValue">N/A</strong></p>
-                 <p id="regionRevPercentP" style="display: none;" title="Percentage of the Region's QTD Revenue target provided by filtered stores">Region Rev Contrib %: <strong id="regionRevPercentValue">N/A</strong></p>
+                 <p id="percentQuarterlyTerritoryTargetP" style="display: none;" title="Average '%Quarterly Territory Rev Target' across stores with data">% Territory Quarterly Target: <strong id="percentQuarterlyTerritoryTargetValue">N/A</strong></p>
+                 <p id="territoryRevPercentP" style="display: none;" title="Average 'Territory Rev%' across stores with data">Territory Rev Contrib %: <strong id="territoryRevPercentValue">N/A</strong></p>
+                 <p id="districtRevPercentP" style="display: none;" title="Average 'District Rev%' across stores with data">District Rev Contrib %: <strong id="districtRevPercentValue">N/A</strong></p>
+                 <p id="regionRevPercentP" style="display: none;" title="Average 'Region Rev%' across stores with data">Region Rev Contrib %: <strong id="regionRevPercentValue">N/A</strong></p>
             </div>
         </div>
 
         <!-- Mysteryshop & Training Section -->
         <div class="stats-row">
             <div id="repPmrSection" class="card rep-pmr-container">
-                <h3>Mysteryshop (Filtered Avg)</h3>
-                <p title="Average score for Representative Demo Skills during mysteryshops">Rep Skill Ach: <strong id="repSkillAchValue">N/A</strong></p>
-                <p title="Average score for the Voluntary Promo Mention Rate during mysteryshops">(V)PMR Ach: <strong id="vPmrAchValue">N/A</strong></p>
+                <h3 title="Averages calculated only from stores with data for each metric">Mysteryshop (Filtered Avg*)</h3>
+                <p title="Average 'Rep Skill Ach' across stores with data">Rep Skill Ach: <strong id="repSkillAchValue">N/A</strong></p>
+                <p title="Average '(V)PMR Ach' across stores with data">(V)PMR Ach: <strong id="vPmrAchValue">N/A</strong></p>
             </div>
 
             <div id="trainingStatsSection" class="card training-stats-container">
-                <h3>Training Stats (Filtered Avg)</h3>
-                 <p title="Average training score of Representatives during visits">Post Training Score: <strong id="postTrainingScoreValue">N/A</strong></p>
-                <p title="Average result-to-goal percentage for Elite usage">Elite Score %: <strong id="eliteValue">N/A</strong></p>
+                 <h3 title="Averages calculated only from stores with data for each metric">Training Stats (Filtered Avg*)</h3>
+                 <p title="Average 'Post Training Score' across stores with data">Post Training Score: <strong id="postTrainingScoreValue">N/A</strong></p>
+                <p title="Average 'Elite' score % across stores with data">Elite Score %: <strong id="eliteValue">N/A</strong></p>
             </div>
         </div>
 
@@ -191,7 +195,7 @@
                          </tr>
                      </thead>
                     <tbody id="attachRateTableBody"></tbody>
-                    <tfoot id="attachRateTableFooter"></tfoot>
+                    <tfoot id="attachRateTableFooter"></tfoot> <!-- Footer for averages -->
                  </table>
             </div>
              <p id="attachTableStatus" class="table-status"></p>
