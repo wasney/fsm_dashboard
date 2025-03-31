@@ -43,14 +43,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const dealerFilter = document.getElementById('dealerFilter');
     const storeFilter = document.getElementById('storeFilter');
     const storeSearch = document.getElementById('storeSearch');
+
+    // CORRECTED FLAG FILTER CHECKBOX MAPPING
     const flagFiltersCheckboxes = FLAG_HEADERS.reduce((acc, header) => {
-        // Construct ID based on common pattern (lowercase, remove space/underscore)
-        const idBase = header.toLowerCase().replace(/[ _]/g, '');
-        const element = document.getElementById(idBase + 'Filter');
-        if (element) acc[header] = element;
-         else console.warn(`Flag filter checkbox not found for ID: ${idBase + 'Filter'}`);
+        let expectedId = '';
+        // Manually map headers to their specific HTML IDs
+        switch (header) {
+            case 'SUPER STORE':       expectedId = 'superStoreFilter'; break;
+            case 'GOLDEN RHINO':      expectedId = 'goldenRhinoFilter'; break;
+            case 'GCE':               expectedId = 'gceFilter'; break;
+            case 'AI_Zone':           expectedId = 'aiZoneFilter'; break; // Match exact case from HTML
+            case 'Hispanic_Market':   expectedId = 'hispanicMarketFilter'; break; // Match exact case from HTML
+            case 'EV ROUTE':          expectedId = 'evRouteFilter'; break;
+            default:
+                console.warn(`Unknown flag header encountered: ${header}`);
+                return acc; // Skip unknown headers
+        }
+
+        const element = document.getElementById(expectedId);
+        if (element) {
+            acc[header] = element; // Store the element reference using the original header name as key
+        } else {
+            // This warning should now only appear if the HTML ID genuinely doesn't exist or HTML is not loaded
+            console.warn(`Flag filter checkbox not found for ID: ${expectedId} (Header: ${header})`);
+        }
         return acc;
     }, {});
+
     const territorySelectAll = document.getElementById('territorySelectAll');
     const territoryDeselectAll = document.getElementById('territoryDeselectAll');
     const storeSelectAll = document.getElementById('storeSelectAll');
@@ -835,7 +854,8 @@ document.addEventListener('DOMContentLoaded', () => {
                      if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue))) {
                          formattedValue = 'N/A'; // Display N/A if original is null or parsing fails (except for Store name)
                      } else {
-                         formattedValue = col.format(isPercentCol ? numericValue : rawValue); // Format parsed % or original value
+                         // If it's the Store column, use the rawValue directly. Otherwise format.
+                         formattedValue = (col.key === 'Store') ? rawValue : col.format(isPercentCol ? numericValue : rawValue);
                      }
 
                      td.textContent = formattedValue;
@@ -1030,7 +1050,8 @@ document.addEventListener('DOMContentLoaded', () => {
                          }
                          // Preserve numbers as numbers, leave other types as strings
                          const numVal = parseNumber(value);
-                         if (!isNaN(numVal) && typeof value !== 'boolean') { // Don't convert bools to numbers
+                          // Check if it's NOT percent-like AND is a valid number AND not boolean
+                         if (!isPercentLike && !isNaN(numVal) && typeof value !== 'boolean') {
                              value = numVal;
                          }
                      }
