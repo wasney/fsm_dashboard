@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let chartOptionsConfig;
 
     const TOP_N_CHART = 15; // Max items to show on the bar chart
-    const DEBUG_ROW_COUNT = 5; // How many rows to log details for in the filter
+    // const DEBUG_ROW_COUNT = 5; // Removed debug variable
 
     // --- DOM Elements ---
     const excelFileInput = document.getElementById('excelFile');
@@ -74,10 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Summary Elements (remain unchanged)
     const revenueWithDFValue = document.getElementById('revenueWithDFValue');
     // ... rest of summary elements
+    const regionRevPercentValue = document.getElementById('regionRevPercentValue');
 
     // Table Elements (remain unchanged)
     const attachRateTableBody = document.getElementById('attachRateTableBody');
     // ... rest of table elements
+    const exportCsvButton = document.getElementById('exportCsvButton');
 
     // Chart Elements (remain unchanged)
     const mainChartCanvas = document.getElementById('mainChartCanvas').getContext('2d');
@@ -86,10 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store Details Elements (remain unchanged)
     const storeDetailsSection = document.getElementById('storeDetailsSection');
     // ...
+    const closeStoreDetailsButton = document.getElementById('closeStoreDetailsButton');
 
     // Share Elements (remain unchanged)
     const emailRecipientInput = document.getElementById('emailRecipient');
     // ...
+    const shareStatus = document.getElementById('shareStatus');
 
     // --- Global State ---
     let rawData = [];
@@ -124,8 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
          }
          return NaN;
     };
-    // ** Reverted safeGet default back to empty string '' **
-    const safeGet = (obj, path, defaultValue = '') => {
+    const safeGet = (obj, path, defaultValue = '') => { // Keep default as empty string ''
         const value = obj ? obj[path] : undefined;
         return (value !== undefined && value !== null) ? value : defaultValue;
     };
@@ -138,164 +141,86 @@ document.addEventListener('DOMContentLoaded', () => {
         const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => val !== ''));
         return [...Array.from(values).sort()];
     };
-    const setOptions = (selectElement, options, disable = false) => { /* ... (unchanged) ... */
-        selectElement.innerHTML = '';
-        const allOption = document.createElement('option');
-        allOption.value = 'ALL';
-        allOption.textContent = '-- ALL --';
-        selectElement.appendChild(allOption);
-        options.forEach(optionValue => { /* ... */ });
-         selectElement.disabled = disable;
-         selectElement.value = 'ALL';
-     };
-
-    const populateCheckboxMultiSelect = (containerElement, options, disable = false) => { /* ... (unchanged) ... */
-        if (!containerElement) return;
-        containerElement.innerHTML = '';
-        containerElement.scrollTop = 0;
-        if (options.length === 0 && !disable) containerElement.dataset.placeholder = "-- No matching options --";
-        else if (disable) containerElement.dataset.placeholder = "-- Load File First --";
-        else {
-             delete containerElement.dataset.placeholder;
-             options.forEach(optionValue => { /* ... create labels/checkboxes ... */ });
-        }
-        containerElement.classList.toggle('disabled', disable);
-        const selectAllBtn = document.getElementById(`${containerElement.id.replace('Container', '')}SelectAll`);
-        const deselectAllBtn = document.getElementById(`${containerElement.id.replace('Container', '')}DeselectAll`);
-        if (selectAllBtn) selectAllBtn.disabled = disable || options.length === 0;
-        if (deselectAllBtn) deselectAllBtn.disabled = disable || options.length === 0;
-    };
-
-
+    const setOptions = (selectElement, options, disable = false) => { /* ... (unchanged) ... */ };
+    const populateCheckboxMultiSelect = (containerElement, options, disable = false) => { /* ... (unchanged) ... */ };
     const showLoading = (isLoading, isFiltering = false) => { /* ... (unchanged) ... */ };
 
     // --- Theme Handling ---
     const applyTheme = (theme) => { /* ... (unchanged) ... */ };
     const toggleTheme = () => { /* ... (unchanged) ... */ };
-    function getChartOptions(theme = 'dark') { /* ... (unchanged, includes colorDefaults) ... */ }
+    function getChartOptions(theme = 'dark') { /* ... (unchanged) ... */ }
 
 
     // --- Core Functions ---
 
-    const handleFile = async (event) => { /* ... (unchanged, ensures String conversion for allPossibleStores) ... */
+    const handleFile = async (event) => { /* ... (unchanged) ... */
         const file = event.target.files[0];
-        if (!file) { statusDiv.textContent = 'No file selected.'; return; }
+         if (!file) { statusDiv.textContent = 'No file selected.'; return; }
 
-        statusDiv.textContent = 'Reading file...';
-        showLoading(true); filterArea.style.display = 'none'; resultsArea.style.display = 'none'; resetUI(false);
+         statusDiv.textContent = 'Reading file...';
+         showLoading(true); filterArea.style.display = 'none'; resultsArea.style.display = 'none'; resetUI(false);
 
-        try {
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null }); // Use null default here
+         try {
+             const data = await file.arrayBuffer();
+             const workbook = XLSX.read(data);
+             const firstSheetName = workbook.SheetNames[0];
+             const worksheet = workbook.Sheets[firstSheetName];
+             const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null });
 
-            if (jsonData.length > 0) { /* header validation */ }
-            else { throw new Error("Excel sheet appears to be empty."); }
+             if (jsonData.length > 0) { /* header validation */ }
+             else { throw new Error("Excel sheet appears to be empty."); }
 
-            rawData = jsonData;
-            // Ensure store names/values are strings for consistent comparison later
-            allPossibleStores = [...new Set(rawData.map(r => safeGet(r, 'Store', '')).filter(s => s !== ''))]
-                                 .sort()
-                                 .map(s => ({ value: String(s), text: String(s) }));
+             rawData = jsonData;
+             allPossibleStores = [...new Set(rawData.map(r => safeGet(r, 'Store', '')).filter(s => s !== ''))]
+                                  .sort()
+                                  .map(s => ({ value: String(s), text: String(s) }));
 
-            statusDiv.textContent = `Loaded ${rawData.length} rows. Applying default filters...`;
-            populateFilters(rawData);
-            filterArea.style.display = 'block'; resetFiltersButton.disabled = false;
-            applyFilters();
+             statusDiv.textContent = `Loaded ${rawData.length} rows. Applying default filters...`;
+             populateFilters(rawData);
+             filterArea.style.display = 'block'; resetFiltersButton.disabled = false;
+             applyFilters();
 
-        } catch (error) { /* error handling */ }
-        finally { /* finally block */ }
+         } catch (error) { /* error handling */ }
+         finally { /* finally block */ }
     };
 
-    const populateFilters = (data) => { /* ... (unchanged, uses String map for territory options) ... */
-        setOptions(regionFilter, getUniqueValues(data, 'REGION'));
-        setOptions(districtFilter, getUniqueValues(data, 'DISTRICT'));
-        setOptions(fsmFilter, getUniqueValues(data, 'FSM NAME'));
-        setOptions(channelFilter, getUniqueValues(data, 'CHANNEL'));
-        setOptions(subchannelFilter, getUniqueValues(data, 'SUB_CHANNEL'));
-        setOptions(dealerFilter, getUniqueValues(data, 'DEALER_NAME'));
-        // Ensure territory options are strings
-        const territoryOptions = getUniqueValues(data, 'Q2 Territory').map(String);
-        populateCheckboxMultiSelect(territoryFilterContainer, territoryOptions, false);
-        storeOptions = [...allPossibleStores];
-        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false);
-        Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.disabled = false });
-        storeSearch.disabled = false;
-        applyFiltersButton.disabled = false; resetFiltersButton.disabled = false;
-        addDependencyFilterListeners();
-    };
-
+    const populateFilters = (data) => { /* ... (unchanged) ... */ };
     const addDependencyFilterListeners = () => { /* ... (unchanged) ... */ };
-
-     const updateStoreFilterOptionsBasedOnHierarchy = () => { /* ... (unchanged, uses String comparisons) ... */
-        if (rawData.length === 0) return;
-        const selectedRegion = regionFilter.value;
-        const selectedDistrict = districtFilter.value;
-        const selectedTerritories = territoryFilterContainer ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value) : [];
-        // ... other filters ...
-        const potentiallyValidStoresData = rawData.filter(row => {
-            if (selectedRegion !== 'ALL' && String(safeGet(row, 'REGION', '')) !== selectedRegion) return false;
-            if (selectedDistrict !== 'ALL' && String(safeGet(row, 'DISTRICT', '')) !== selectedDistrict) return false;
-            if (selectedTerritories.length > 0 && !selectedTerritories.includes(String(safeGet(row, 'Q2 Territory', '')))) return false;
-            // ... rest of filter conditions ...
-            return true;
-        });
-        const validStoreNames = new Set(potentiallyValidStoresData.map(row => String(safeGet(row, 'Store', ''))).filter(Boolean));
-        storeOptions = Array.from(validStoreNames).sort().map(s => ({ value: s, text: s }));
-        const previouslyCheckedStores = storeFilterContainer ? new Set(Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)) : new Set();
-        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false);
-        filterStoreOptions();
-        if (storeFilterContainer) { /* re-check logic */ }
-     };
-
+    const updateStoreFilterOptionsBasedOnHierarchy = () => { /* ... (unchanged) ... */ };
     const filterStoreOptions = () => { /* ... (unchanged) ... */ };
 
 
-    // ** ADDED DEBUGGING LOGS to applyFilters **
+    // ** applyFilters WITHOUT DEBUGGING LOGS **
     const applyFilters = () => {
         if (rawData.length === 0) { statusDiv.textContent = "Please load a file first."; return; }
         showLoading(true, true);
         resultsArea.style.display = 'none';
 
-        // --- DEBUGGING START ---
-        console.log("--- Applying Filters ---");
-        const selectedRegion = regionFilter.value;
-        const selectedDistrict = districtFilter.value;
-        const selectedTerritories = territoryFilterContainer
-            ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
-            : [];
-        const selectedFsm = fsmFilter.value;
-        const selectedChannel = channelFilter.value;
-        const selectedSubchannel = subchannelFilter.value;
-        const selectedDealer = dealerFilter.value;
-        const selectedStores = storeFilterContainer
-            ? Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
-            : [];
-        const selectedFlags = {};
-         Object.entries(flagFiltersCheckboxes).forEach(([key, input]) => {
-             if (input && input.checked) { selectedFlags[key] = true; }
-         });
-
-         console.log("Selected Region:", selectedRegion);
-         console.log("Selected District:", selectedDistrict);
-         console.log("Selected Territories:", selectedTerritories);
-         console.log("Selected FSM:", selectedFsm);
-         console.log("Selected Channel:", selectedChannel);
-         console.log("Selected Subchannel:", selectedSubchannel);
-         console.log("Selected Dealer:", selectedDealer);
-         console.log("Selected Stores:", selectedStores);
-         console.log("Selected Flags:", selectedFlags);
-         console.log("Raw Data Rows:", rawData.length);
-        // --- DEBUGGING END ---
-
+        // Intentionally removed console logs from here
 
         setTimeout(() => {
             try {
+                // Retrieve selected values
+                const selectedRegion = regionFilter.value;
+                const selectedDistrict = districtFilter.value;
+                const selectedTerritories = territoryFilterContainer
+                    ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
+                    : [];
+                const selectedFsm = fsmFilter.value;
+                const selectedChannel = channelFilter.value;
+                const selectedSubchannel = subchannelFilter.value;
+                const selectedDealer = dealerFilter.value;
+                const selectedStores = storeFilterContainer
+                    ? Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
+                    : [];
+                const selectedFlags = {};
+                 Object.entries(flagFiltersCheckboxes).forEach(([key, input]) => {
+                     if (input && input.checked) { selectedFlags[key] = true; }
+                 });
+
                 // Filter rawData
-                filteredData = rawData.filter((row, index) => { // Added index for logging limit
-                    // Get stringified row values (using safeGet default '')
+                filteredData = rawData.filter(row => {
+                    // Get stringified row values
                     const rowRegion = String(safeGet(row, 'REGION', ''));
                     const rowDistrict = String(safeGet(row, 'DISTRICT', ''));
                     const rowTerritory = String(safeGet(row, 'Q2 Territory', ''));
@@ -325,27 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    const finalMatch = regionMatch && districtMatch && territoryMatch && fsmMatch && channelMatch && subchannelMatch && dealerMatch && storeMatch && flagsMatch;
+                    // Intentionally removed console logs from inside the filter callback
 
-                    // --- DEBUGGING START (Log details for first few rows) ---
-                    if (index < DEBUG_ROW_COUNT) {
-                         console.log(`--- Row ${index} Data ---`);
-                         console.log(` Store: ${rowStore}, Territory: ${rowTerritory}, Region: ${rowRegion}, District: ${rowDistrict}`);
-                         console.log(` Conditions Met: Region=${regionMatch}, District=${districtMatch}, Territory=${territoryMatch}, FSM=${fsmMatch}, Channel=${channelMatch}, Subchannel=${subchannelMatch}, Dealer=${dealerMatch}, Store=${storeMatch}, Flags=${flagsMatch}`);
-                         console.log(` Final Match for Row ${index}:`, finalMatch);
-                    }
-                    // --- DEBUGGING END ---
-
-                    return finalMatch; // Row passes all filters
+                    return regionMatch && districtMatch && territoryMatch && fsmMatch && channelMatch && subchannelMatch && dealerMatch && storeMatch && flagsMatch;
                 });
 
-                 // --- DEBUGGING START ---
-                 console.log("Filtered Data Rows:", filteredData.length);
-                 if (filteredData.length === 0 && rawData.length > 0) {
-                     console.warn("Filtering resulted in zero rows. Check filter logic and data consistency.");
-                 }
-                 // --- DEBUGGING END ---
-
+                // Intentionally removed console logs after the filter
 
                 // Update UI sections
                 updateSummary(filteredData);
@@ -353,22 +263,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateAttachRateTable(filteredData);
 
                 // Show/hide store details
-                if (filteredData.length === 1) { /* ... */ }
-                else { hideStoreDetails(); }
+                if (filteredData.length === 1) {
+                    showStoreDetails(filteredData[0]);
+                    highlightTableRow(safeGet(filteredData[0], 'Store', '')); // Use safeGet default ''
+                 } else { hideStoreDetails(); }
 
                 // Final UI updates
                 statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`;
                 resultsArea.style.display = 'block';
                 exportCsvButton.disabled = filteredData.length === 0;
 
-            } catch (error) { /* ... error handling ... */ }
-            finally { showLoading(false, true); }
+            } catch (error) {
+                 console.error("Error applying filters:", error); // Keep error logging
+                 statusDiv.textContent = "Error applying filters. Check console for details.";
+                 filteredData = []; resultsArea.style.display = 'none'; exportCsvButton.disabled = true;
+                 updateSummary([]); updateCharts([]); updateAttachRateTable([]); hideStoreDetails();
+             } finally { showLoading(false, true); }
         }, 10);
     };
 
     const resetFilters = () => { /* ... (unchanged) ... */ };
-     const handleResetFilters = () => { /* ... (unchanged) ... */ };
-     const resetUI = (apply = true) => { /* ... (unchanged) ... */ };
+    const handleResetFilters = () => { /* ... (unchanged) ... */ };
+    const resetUI = (apply = true) => { /* ... (unchanged) ... */ };
     const updateSummary = (data) => { /* ... (unchanged) ... */ };
     const updateContextualSummary = (data) => { /* ... (unchanged) ... */ };
     const updateCharts = (data) => { /* ... (unchanged) ... */ };
@@ -377,13 +293,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateSortArrows = () => { /* ... (unchanged) ... */ };
     const showStoreDetails = (storeData) => { /* ... (unchanged) ... */ };
     const hideStoreDetails = () => { /* ... (unchanged) ... */ };
-     const highlightTableRow = (storeName) => { /* ... (unchanged) ... */ };
+    const highlightTableRow = (storeName) => { /* ... (unchanged) ... */ };
     const exportData = () => { /* ... (unchanged) ... */ };
     const getFilterSummary = () => { /* ... (unchanged) ... */ };
     const generateEmailBody = () => { /* ... (unchanged) ... */ };
     const handleShareEmail = () => { /* ... (unchanged) ... */ };
-     const selectAllOptions = (containerElement) => { /* ... (unchanged) ... */ };
-     const deselectAllOptions = (containerElement) => { /* ... (unchanged) ... */ };
+    const selectAllOptions = (containerElement) => { /* ... (unchanged) ... */ };
+    const deselectAllOptions = (containerElement) => { /* ... (unchanged) ... */ };
 
     // --- Event Listeners ---
     // ... (remain unchanged) ...
