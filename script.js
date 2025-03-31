@@ -1173,3 +1173,4 @@ document.addEventListener('DOMContentLoaded', () => {
     resetUI(false);
 
 }); // End DOMContentLoaded
+

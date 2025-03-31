@@ -1,13 +1,3 @@
-Flag filter checkbox not found for ID: superstoreFilter
-(anonymous) @ script.js:51
-(anonymous) @ script.js:46
-script.js:51  Flag filter checkbox not found for ID: goldenrhinoFilter
-(anonymous) @ script.js:51
-(anonymous) @ script.js:46
-script.js:51  Flag filter checkbox not found for ID: aizoneFilter
-(anonymous) @ script.js:51
-(anonymous) @ script.js:46
-script.js:51  Flag filter checkbox not found for ID: hispanicmarketFilter
-(anonymous) @ script.js:51
-(anonymous) @ script.js:46
-script.js:51  Flag filter checkbox not found for ID: evrouteFilter
+Uncaught ReferenceError: barGoodBg is not defined
+    at getChartOptions (script.js:277:13)
+    at HTMLDocument.<anonymous> (script.js:24:30)

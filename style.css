@@ -46,6 +46,7 @@
     --chart-bar-bad-border: rgba(255, 99, 132, 1);
     --chart-line-color: rgba(255, 206, 86, 1);
     --chart-line-bg: rgba(255, 206, 86, 0.2);
+    --placeholder-text-color: #777;
 }
 
 /* --- Global Resets & Body --- */
@@ -86,7 +87,7 @@ body {
     cursor: pointer;
     font-size: 1.2rem; /* Adjust icon size */
     line-height: 1;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 .theme-toggle-button:hover {
     background-color: var(--input-bg-color);
@@ -140,16 +141,69 @@ a:hover { color: var(--link-hover-color); text-decoration: underline;}
 .filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
 .filter-group label, .flags-label { font-weight: 600; color: var(--text-color); margin-bottom: 0; width: auto; text-align: left; font-size: 0.95em; }
 .filter-group select, .filter-group input[type="text"] { padding: 0.6rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; min-width: 0; width: 100%; background-color: var(--input-bg-color); color: var(--text-color); font-size: 0.9rem; }
-.filter-group select[multiple] { padding: 0.5rem; height: auto; min-height: 100px; font-size: 0.85rem; }
+/* Removed select[multiple] styles */
 .filter-group select:disabled, .filter-group input:disabled, .filter-group button:disabled, .filter-group-flags input:disabled,
+.checkbox-multiselect.disabled, /* Style for disabled checkbox container */
 button:disabled { background-color: var(--input-disabled-bg-color) !important; cursor: not-allowed !important; color: var(--input-disabled-text-color) !important; border-color: var(--input-border-color) !important; opacity: 0.6; }
 .filter-group select option { background-color: var(--input-bg-color); color: var(--text-color); }
-.multi-select-info { font-size: 0.75em; color: #999; margin-top: -2px; margin-bottom: 2px; display: block; text-align: left; }
 .multi-select-controls { display: flex; gap: 0.5rem; margin-bottom: 0.3rem; }
-.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: var(--button-bg-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 3px; cursor: pointer; }
+.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: var(--button-bg-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 3px; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
 .select-button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); color: var(--button-hover-text-color); }
 #storeSearch { margin-bottom: 0.3rem; }
 .filter-group-store { grid-column: span 2; /* Make store filter wider if needed */ }
+
+/* --- Checkbox Multi-Select Container --- */
+.checkbox-multiselect {
+    border: 1px solid var(--input-border-color);
+    background-color: var(--input-bg-color);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    height: 130px; /* Adjust height as needed */
+    overflow-y: auto; /* Enable vertical scrolling */
+    font-size: 0.85rem;
+    position: relative; /* For placeholder */
+}
+.checkbox-multiselect:empty::before { /* Placeholder text when empty */
+    content: attr(data-placeholder);
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    color: var(--placeholder-text-color);
+    font-style: italic;
+    pointer-events: none; /* Prevent interaction with placeholder */
+}
+.checkbox-multiselect.disabled { /* Specific style for disabled state */
+    background-color: var(--input-disabled-bg-color) !important;
+    border-color: var(--input-border-color) !important;
+    opacity: 0.6;
+    pointer-events: none; /* Disable clicks */
+}
+.checkbox-multiselect.disabled::before { /* Adjust placeholder color when disabled */
+    color: var(--input-disabled-text-color);
+}
+.cb-item { /* Style for each checkbox item (label wrapping input) */
+    display: block; /* Ensure each item takes full width */
+    padding: 0.2rem 0.3rem;
+    cursor: pointer;
+    border-radius: 3px;
+    white-space: nowrap; /* Prevent wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis if text overflows */
+    transition: background-color 0.2s ease;
+}
+.cb-item:hover {
+    background-color: var(--button-bg-color); /* Subtle hover effect */
+}
+.cb-item input[type="checkbox"] {
+    margin-right: 0.5rem;
+    vertical-align: middle;
+    accent-color: var(--heading1-color);
+    cursor: pointer;
+}
+.cb-item span { /* The text part */
+    vertical-align: middle;
+}
+
 
 /* --- Flag Filters --- */
 .filter-group-flags { grid-column: 1 / -1; /* Span full width */ margin-top: 0.5rem; }
@@ -345,12 +399,18 @@ body.light-mode {
     --chart-bar-bad-border: rgba(220, 53, 69, 1);
     --chart-line-color: rgba(255, 193, 7, 1); /* Bootstrap warning */
     --chart-line-bg: rgba(255, 193, 7, 0.2);
+    --placeholder-text-color: #999;
 }
 /* Ensure select options are readable in light mode */
 body.light-mode .filter-group select option {
     background-color: var(--input-bg-color);
     color: var(--text-color);
 }
+/* Checkbox hover in light mode */
+body.light-mode .cb-item:hover {
+    background-color: var(--button-hover-bg-color);
+}
+
 
 /* --- MEDIA QUERIES --- */
 @media (min-width: 768px) { /* Adjusted breakpoint */
@@ -368,6 +428,8 @@ body.light-mode .filter-group select option {
     .filter-group-store { grid-column: span 1; /* Reset span */ }
     .filter-actions { justify-content: flex-end; } /* Align buttons to the right */
     .apply-filters-button, .reset-filters-button { flex-basis: 150px; /* Give buttons a consistent base size */}
+    /* Adjust checkbox container height on larger screens */
+    .checkbox-multiselect { height: 150px; }
 }
 
 @media (min-width: 1200px) { /* Adjusted breakpoint */
@@ -383,4 +445,6 @@ body.light-mode .filter-group select option {
     .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
     .header-controls { padding: 0 20px; }
     .theme-toggle-button { right: 25px; }
+     /* Adjust checkbox container height on larger screens */
+    .checkbox-multiselect { height: 180px; }
 }

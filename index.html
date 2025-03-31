@@ -6,7 +6,7 @@
     <title>FSM Dashboard Enhanced</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <meta name="theme-color" content="#2c2c2c"> </head>
+    <meta name="theme-color" content="#1e1e1e"> </head>
 <body>
     <div class="header-controls">
         <h1>FSM Performance Dashboard</h1>
@@ -21,7 +21,7 @@
         <div id="loadingIndicator" style="display: none;">
             <div class="spinner"></div> Processing file...
         </div>
-        </div>
+    </div>
 
     <div id="filterArea" class="card" style="display: none;">
         <h2>Filters</h2>
@@ -35,15 +35,13 @@
                 <select id="districtFilter" disabled><option value="ALL">-- Load File First --</option></select>
             </div>
             <div class="filter-group">
-                <label for="territoryFilter">Q2 Territory:</label>
+                <label for="territoryFilterContainer">Q2 Territory:</label>
                  <div class="multi-select-controls">
                     <button class="select-button" id="territorySelectAll" disabled>Select All</button>
                     <button class="select-button" id="territoryDeselectAll" disabled>Deselect All</button>
                  </div>
-                <small class="multi-select-info">(Hold Ctrl/Cmd to select multiple)</small>
-                <select id="territoryFilter" disabled multiple size="6">
-                    <option value="ALL">-- Load File First --</option>
-                </select>
+                 <div id="territoryFilterContainer" class="checkbox-multiselect" data-placeholder="-- Load File First --">
+                    </div>
             </div>
              <div class="filter-group">
                 <label for="fsmFilter">FSM Name:</label>
@@ -64,16 +62,14 @@
             </div>
 
              <div class="filter-group filter-group-store">
-                <label for="storeFilter">Store:</label>
+                <label for="storeFilterContainer">Store:</label>
                  <input type="text" id="storeSearch" placeholder="Search stores..." disabled>
                  <div class="multi-select-controls">
                      <button class="select-button" id="storeSelectAll" disabled>Select All</button>
                     <button class="select-button" id="storeDeselectAll" disabled>Deselect All</button>
                  </div>
-                <small class="multi-select-info">(Hold Ctrl/Cmd to select multiple)</small>
-                <select id="storeFilter" disabled multiple size="8">
-                     <option value="ALL">-- Load File First --</option>
-                </select>
+                 <div id="storeFilterContainer" class="checkbox-multiselect" data-placeholder="-- Load File First --">
+                     </div>
             </div>
 
             <div class="filter-group-flags">
@@ -147,7 +143,7 @@
 
         <div class="chart-container card" id="mainChartContainer">
              <h3>Revenue Performance (Filtered Stores/Groups)</h3>
-             <div class="chart-wrapper">
+            <div class="chart-wrapper">
                 <canvas id="mainChartCanvas"></canvas>
             </div>
         </div>
@@ -157,7 +153,7 @@
             <div class="chart-wrapper">
                  <canvas id="secondaryChartCanvas"></canvas>
             </div>
-             <p style="text-align:center; font-size: 0.9em; color: #a0a0a0;">Chart options coming soon.</p>
+             <p style="text-align:center; font-size: 0.9em; color: var(--text-muted-color);">Chart options coming soon.</p>
         </div>
 
 
