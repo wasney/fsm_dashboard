@@ -1,35 +1,118 @@
-/* --- Global Resets & Body (Dark Mode) --- */
+/* --- Theme Variables --- */
+:root {
+    --bg-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --text-muted-color: #a0a0a0;
+    --card-bg-color: #2c2c2c;
+    --card-border-color: #444;
+    --input-bg-color: #333;
+    --input-border-color: #555;
+    --input-disabled-bg-color: #444;
+    --input-disabled-text-color: #888;
+    --button-bg-color: #4a4a4a;
+    --button-text-color: #ccc;
+    --button-border-color: #666;
+    --button-hover-bg-color: #5a5a5a;
+    --button-hover-text-color: #eee;
+    --primary-button-bg-color: #3081d2;
+    --primary-button-hover-bg-color: #58a6ff;
+    --primary-button-text-color: #ffffff;
+    --secondary-button-bg-color: #6c757d; /* For Reset */
+    --secondary-button-hover-bg-color: #5a6268; /* For Reset */
+    --heading1-color: #58a6ff;
+    --heading2-color: #77b6ff;
+    --heading3-color: #58a6ff;
+    --link-color: #58a6ff;
+    --link-hover-color: #8cc2ff;
+    --table-header-bg-color: #3a3a3a;
+    --table-header-text-color: #f0f0f0;
+    --table-border-color: #555;
+    --table-row-hover-bg-color: #383838;
+    --table-footer-bg-color: #333;
+    --table-footer-text-color: #eee;
+    --table-selected-row-bg-color: #405d7a;
+    --highlight-green-bg: rgba(42, 74, 42, 0.7);
+    --highlight-green-text: #b0ffb0;
+    --highlight-red-bg: rgba(90, 42, 42, 0.7);
+    --highlight-red-text: #ffb0b0;
+    --spinner-color: #99ccff;
+    --spinner-bg-color: rgba(153, 204, 255, 0.3);
+    --chart-grid-color: rgba(224, 224, 224, 0.2);
+    --chart-tick-color: #e0e0e0;
+    --chart-label-color: #e0e0e0;
+    --chart-bar-good-bg: rgba(75, 192, 192, 0.6);
+    --chart-bar-good-border: rgba(75, 192, 192, 1);
+    --chart-bar-bad-bg: rgba(255, 99, 132, 0.6);
+    --chart-bar-bad-border: rgba(255, 99, 132, 1);
+    --chart-line-color: rgba(255, 206, 86, 1);
+    --chart-line-bg: rgba(255, 206, 86, 0.2);
+}
+
+/* --- Global Resets & Body --- */
 *, *::before, *::after { box-sizing: border-box; }
 body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     margin: 0;
     padding: 0;
-    background-color: #1e1e1e; /* Dark background */
-    color: #e0e0e0; /* Light text */
+    background-color: var(--bg-color);
+    color: var(--text-color);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transition */
 }
 .container { max-width: 1400px; margin: 0 auto; padding: 10px; } /* Wider container */
 
-/* --- Headings (Dark Mode) --- */
-h1 { color: #58a6ff; text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-weight: 600; font-size: 1.8rem; }
-h2 { color: #77b6ff; text-align: center; margin-top: 0; margin-bottom: 1rem; font-weight: 500; font-size: 1.4rem; border-bottom: 1px solid #444; padding-bottom: 0.5rem; }
-h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-size: 1.15rem; text-align: center; }
+/* --- Header Controls & Theme Toggle --- */
+.header-controls {
+    display: flex;
+    justify-content: center; /* Center items horizontally */
+    align-items: center;
+    position: relative; /* For positioning the toggle button */
+    padding: 0 10px; /* Add some padding */
+    max-width: 1400px; /* Match container */
+    margin: 0 auto; /* Center container */
+}
+.theme-toggle-button {
+    position: absolute;
+    top: 50%;
+    right: 15px; /* Position on the right */
+    transform: translateY(-50%); /* Vertically center */
+    background: none;
+    border: 1px solid var(--input-border-color);
+    color: var(--text-color);
+    padding: 0.3rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2rem; /* Adjust icon size */
+    line-height: 1;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.theme-toggle-button:hover {
+    background-color: var(--input-bg-color);
+}
+
+
+/* --- Headings --- */
+h1 { color: var(--heading1-color); text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-weight: 600; font-size: 1.8rem; flex-grow: 1; }
+h2 { color: var(--heading2-color); text-align: center; margin-top: 0; margin-bottom: 1rem; font-weight: 500; font-size: 1.4rem; border-bottom: 1px solid var(--card-border-color); padding-bottom: 0.5rem; }
+h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading3-color); font-weight: 500; font-size: 1.15rem; text-align: center; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { color: var(--link-hover-color); text-decoration: underline;}
 
 /* --- Upload Instructions Style --- */
 .upload-instructions {
     text-align: center;
-    color: #a0a0a0;
+    color: var(--text-muted-color);
     margin-top: -0.5rem;
     margin-bottom: 1.5rem;
     padding: 0 10px;
 }
 
-/* --- Card Styling (Dark Mode) --- */
+/* --- Card Styling --- */
 .card {
-    background-color: #2c2c2c;
-    border: 1px solid #444;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--card-border-color);
     border-radius: 0.25rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     padding: 1rem;
@@ -37,78 +120,99 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     width: auto;
     margin-left: 10px;
     margin-right: 10px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* --- Input Area & Loading Indicator --- */
 .input-area { text-align: center; max-width: 600px; }
-.input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: #c0c0c0; }
-#excelFile { border: 1px solid #555; padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; background-color: #333; color: #e0e0e0; }
-#excelFile::file-selector-button { padding: 0.5rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; background-color: #444; color: #e0e0e0; cursor: pointer; margin-right: 0.5rem; }
-#status { margin-top: 0.5rem; margin-bottom: 0; font-style: italic; color: #a0a0a0; text-align: center; min-height: 1.5em; padding: 0 10px; }
-#loadingIndicator, #filterLoadingIndicator { color: #99ccff; margin-top: 0.75rem; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.spinner { border: 4px solid rgba(153, 204, 255, 0.3); border-radius: 50%; border-top: 4px solid #99ccff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
-.spinner-small { border: 3px solid rgba(153, 204, 255, 0.3); border-radius: 50%; border-top: 3px solid #99ccff; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+.input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: var(--text-color); }
+#excelFile { border: 1px solid var(--input-border-color); padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; background-color: var(--input-bg-color); color: var(--text-color); }
+#excelFile::file-selector-button { padding: 0.5rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; background-color: var(--input-bg-color); color: var(--text-color); cursor: pointer; margin-right: 0.5rem; }
+#status { margin-top: 0.5rem; margin-bottom: 0; font-style: italic; color: var(--text-muted-color); text-align: center; min-height: 1.5em; padding: 0 10px; }
+#loadingIndicator, #filterLoadingIndicator { color: var(--spinner-color); margin-top: 0.75rem; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.spinner { border: 4px solid var(--spinner-bg-color); border-radius: 50%; border-top: 4px solid var(--spinner-color); width: 20px; height: 20px; animation: spin 1s linear infinite; }
+.spinner-small { border: 3px solid var(--spinner-bg-color); border-radius: 50%; border-top: 3px solid var(--spinner-color); width: 16px; height: 16px; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- Filter Controls (Dark Mode) --- */
+/* --- Filter Controls --- */
 #filterArea { max-width: 1200px; }
 .filter-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
 .filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
-.filter-group label, .flags-label { font-weight: 600; color: #c0c0c0; margin-bottom: 0; width: auto; text-align: left; font-size: 0.95em; }
-.filter-group select, .filter-group input[type="text"] { padding: 0.6rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; min-width: 0; width: 100%; background-color: #333; color: #e0e0e0; font-size: 0.9rem; }
+.filter-group label, .flags-label { font-weight: 600; color: var(--text-color); margin-bottom: 0; width: auto; text-align: left; font-size: 0.95em; }
+.filter-group select, .filter-group input[type="text"] { padding: 0.6rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; min-width: 0; width: 100%; background-color: var(--input-bg-color); color: var(--text-color); font-size: 0.9rem; }
 .filter-group select[multiple] { padding: 0.5rem; height: auto; min-height: 100px; font-size: 0.85rem; }
-.filter-group select:disabled, .filter-group input:disabled, .filter-group button:disabled, .filter-group-flags input:disabled { background-color: #444 !important; cursor: not-allowed !important; color: #888 !important; border-color: #555 !important; opacity: 0.6; }
-.filter-group select option { background-color: #333; color: #e0e0e0; }
+.filter-group select:disabled, .filter-group input:disabled, .filter-group button:disabled, .filter-group-flags input:disabled,
+button:disabled { background-color: var(--input-disabled-bg-color) !important; cursor: not-allowed !important; color: var(--input-disabled-text-color) !important; border-color: var(--input-border-color) !important; opacity: 0.6; }
+.filter-group select option { background-color: var(--input-bg-color); color: var(--text-color); }
 .multi-select-info { font-size: 0.75em; color: #999; margin-top: -2px; margin-bottom: 2px; display: block; text-align: left; }
 .multi-select-controls { display: flex; gap: 0.5rem; margin-bottom: 0.3rem; }
-.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 3px; cursor: pointer; }
-.select-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
+.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: var(--button-bg-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 3px; cursor: pointer; }
+.select-button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); color: var(--button-hover-text-color); }
 #storeSearch { margin-bottom: 0.3rem; }
 .filter-group-store { grid-column: span 2; /* Make store filter wider if needed */ }
 
 /* --- Flag Filters --- */
 .filter-group-flags { grid-column: 1 / -1; /* Span full width */ margin-top: 0.5rem; }
 .flags-label { margin-bottom: 0.5rem; display: block; }
-.flag-toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; background-color: #333; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; }
-.flag-toggles label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9em; color: #ccc; cursor: pointer; }
-.flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: #58a6ff; cursor: pointer; margin: 0; }
-.flag-toggles label:has(input:disabled) { cursor: not-allowed; color: #888; }
+.flag-toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; background-color: var(--input-bg-color); padding: 0.75rem; border-radius: 4px; border: 1px solid var(--card-border-color); }
+.flag-toggles label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9em; color: var(--text-color); cursor: pointer; }
+.flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--heading1-color); cursor: pointer; margin: 0; }
+.flag-toggles label:has(input:disabled) { cursor: not-allowed; color: var(--input-disabled-text-color); }
 
-
-.apply-filters-button {
-    display: block;
-    width: 100%;
-    max-width: 250px;
-    margin: 1rem auto 0 auto;
+/* --- Filter Action Buttons --- */
+.filter-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem; /* Space between buttons */
+    margin-top: 1rem;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+.apply-filters-button, .reset-filters-button {
+    /* Common styles */
     padding: 0.7rem 1rem;
-    background-color: #3081d2;
-    color: #ffffff;
+    color: var(--primary-button-text-color);
     border: none;
     border-radius: 0.25rem;
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
     transition: background-color 0.2s ease;
+    flex-grow: 0; /* Prevent buttons from growing too much */
+    flex-basis: auto; /* Default size */
+    min-width: 120px; /* Minimum width */
 }
-.apply-filters-button:hover:not(:disabled) { background-color: #58a6ff; }
+.apply-filters-button {
+    background-color: var(--primary-button-bg-color);
+}
+.apply-filters-button:hover:not(:disabled) {
+    background-color: var(--primary-button-hover-bg-color);
+}
+.reset-filters-button {
+    background-color: var(--secondary-button-bg-color); /* Different color for reset */
+}
+.reset-filters-button:hover:not(:disabled) {
+    background-color: var(--secondary-button-hover-bg-color);
+}
+
 
 /* --- Results Area --- */
 .results-container { margin-top: 1.5rem; }
 
 /* --- Store Details Container --- */
 .store-details-container { max-width: 95%; position: relative; } /* Allow more width */
-#storeDetailsContent { font-size: 0.9rem; text-align: left; color: #d0d0d0; line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; /* For scrollbar */}
+#storeDetailsContent { font-size: 0.9rem; text-align: left; color: var(--text-color); line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; /* For scrollbar */}
 #storeDetailsContent p { margin-bottom: 0.5rem; }
-#storeDetailsContent strong { color: #e5e5e5; margin-right: 5px; }
-#storeDetailsContent hr { border: none; border-top: 1px solid #444; margin: 0.75rem 0; }
-#storeDetailsContent span[data-flag="true"] { color: #86dc86; font-weight: bold; }
-#storeDetailsContent span[data-flag="false"] { color: #aaa; }
+#storeDetailsContent strong { color: var(--text-color); font-weight: 600; margin-right: 5px; }
+#storeDetailsContent hr { border: none; border-top: 1px solid var(--card-border-color); margin: 0.75rem 0; }
+#storeDetailsContent span[data-flag="true"] { color: var(--highlight-green-text); font-weight: bold; }
+#storeDetailsContent span[data-flag="false"] { color: var(--text-muted-color); }
 .close-button {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #555;
-    color: #eee;
+    background: var(--button-bg-color);
+    color: var(--button-text-color);
     border: none;
     border-radius: 50%;
     width: 24px;
@@ -119,10 +223,10 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     cursor: pointer;
     font-weight: bold;
 }
-.close-button:hover { background: #777; }
+.close-button:hover { background: var(--button-hover-bg-color); }
 
 
-/* --- Summary & Stat Containers (Dark Mode) --- */
+/* --- Summary & Stat Containers --- */
 .summary-container, .rep-pmr-container, .training-stats-container { max-width: 100%; }
 .summary-container { margin-top: 1rem; } /* Adjust spacing */
 .summary-grid {
@@ -132,10 +236,9 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     text-align: left;
     padding-left: 0;
 }
-.summary-grid p { margin: 0; font-size: 0.95rem; color: #d0d0d0; }
-.summary-grid p strong { font-weight: 600; color: #f0f0f0; margin-left: 5px; }
+.summary-grid p { margin: 0; font-size: 0.95rem; color: var(--text-color); }
+.summary-grid p strong { font-weight: 600; color: var(--text-color); margin-left: 5px; }
 .summary-grid p[style*="display: none"] { display: none !important; } /* Ensure hidden items stay hidden */
-.summary-container span[style*="background-color"] { color: #111; padding: 2px 5px; border-radius: 3px; font-weight: 500; } /* For potential future use */
 
 .stats-row {
     display: flex;
@@ -147,50 +250,107 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     flex: 1 1 300px; /* Allow flex grow/shrink, base width 300px */
     max-width: none; /* Remove max-width from individual cards */
 }
-.rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: #d0d0d0; }
+.rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: var(--text-color); }
 .rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
-.rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: #f0f0f0; }
+.rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: var(--text-color); }
 
 
-/* --- Chart Container (Dark Mode) --- */
-.chart-container { height: 350px; max-width: 95%; /* Wider */ background-color: #2c2c2c; }
-#mainChartCanvas, #secondaryChartCanvas { width: 100% !important; height: 100% !important; }
+/* --- Chart Container --- */
+.chart-container { height: 350px; max-width: 95%; background-color: var(--card-bg-color); transition: background-color 0.3s ease; }
+.chart-wrapper { position: relative; height: 100%; width: 100%; } /* Needed for Chart.js responsiveness */
+#mainChartCanvas, #secondaryChartCanvas { display: block; box-sizing: border-box; height: 100% !important; width: 100% !important; }
 
-/* --- Table Container & Table (Dark Mode) --- */
+
+/* --- Table Container & Table --- */
 .table-container { max-width: 95%; /* Wider */ }
 .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px; }
 .table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; }
-.export-button { padding: 0.4rem 0.8rem; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 4px; font-size: 0.85em; cursor: pointer; }
-.export-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
+.export-button { padding: 0.4rem 0.8rem; background-color: var(--button-bg-color); color: var(--button-text-color); border: 1px solid var(--button-border-color); border-radius: 4px; font-size: 0.85em; cursor: pointer; }
+.export-button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); color: var(--button-hover-text-color); }
 .table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
 #attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
-#attachRateTable th, #attachRateTable td { border: 1px solid #555; padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: #d0d0d0; }
-#attachRateTable th { background-color: #3a3a3a; font-weight: 600; color: #f0f0f0; position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
-#attachRateTable th:hover { background-color: #4a4a4a; }
-#attachRateTable tbody tr { background-color: #2c2c2c; cursor: pointer; } /* Add cursor pointer */
-#attachRateTable tbody tr:hover { background-color: #383838; }
-#attachRateTable tbody tr.selected-row { background-color: #405d7a !important; /* Highlight selected row */ color: #fff; }
+#attachRateTable th, #attachRateTable td { border: 1px solid var(--table-border-color); padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: var(--text-color); }
+#attachRateTable th { background-color: var(--table-header-bg-color); font-weight: 600; color: var(--table-header-text-color); position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
+#attachRateTable th:hover { background-color: var(--button-hover-bg-color); } /* Use button hover for consistency */
+#attachRateTable tbody tr { background-color: var(--card-bg-color); cursor: pointer; transition: background-color 0.2s ease; } /* Add cursor pointer */
+#attachRateTable tbody tr:hover { background-color: var(--table-row-hover-bg-color); }
+#attachRateTable tbody tr.selected-row { background-color: var(--table-selected-row-bg-color) !important; /* Highlight selected row */ color: #fff; }
 #attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical columns, except % target */
-#attachRateTable tfoot tr { background-color: #333; font-weight: bold; color: #eee; }
-#attachRateTable tfoot td { border-top: 2px solid #666; }
+#attachRateTable tfoot tr { background-color: var(--table-footer-bg-color); font-weight: bold; color: var(--table-footer-text-color); }
+#attachRateTable tfoot td { border-top: 2px solid var(--button-border-color); } /* Use button border */
 
-.highlight-green { background-color: rgba(42, 74, 42, 0.7) !important; color: #b0ffb0; }
-.highlight-red { background-color: rgba(90, 42, 42, 0.7) !important; color: #ffb0b0; }
+.highlight-green { background-color: var(--highlight-green-bg) !important; color: var(--highlight-green-text); }
+.highlight-red { background-color: var(--highlight-red-bg) !important; color: var(--highlight-red-text); }
 .sort-arrow { display: inline-block; width: 12px; height: 12px; margin-left: 5px; opacity: 0.5; vertical-align: middle; }
 .sort-arrow.asc::after { content: '▲'; font-size: 0.8em; }
 .sort-arrow.desc::after { content: '▼'; font-size: 0.8em; }
-#attachTableStatus { margin-top: 0.75rem; color: #a0a0a0; font-size: 0.85rem; text-align: center; }
+#attachTableStatus { margin-top: 0.75rem; color: var(--text-muted-color); font-size: 0.85rem; text-align: center; }
 
-/* --- Share Section (Dark Mode) --- */
+/* --- Share Section --- */
 .share-container { max-width: 600px; }
 .share-controls { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
-.share-controls label { font-weight: 600; color: #c0c0c0; margin-bottom: 0.25rem; }
-.share-controls input[type="email"] { padding: 0.6rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; flex-grow: 1; background-color: #333; color: #e0e0e0; }
-.share-controls button { padding: 0.6rem 1rem; background-color: #3081d2; color: #ffffff; border: none; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
-.share-controls button:hover { background-color: #58a6ff; }
-.share-status { margin-top: 0.5rem; font-style: italic; color: #77b6ff; min-height: 1.2em; }
-.share-note { font-size: 0.85rem; color: #a0a0a0; margin-top: 1rem; text-align: center; }
+.share-controls label { font-weight: 600; color: var(--text-color); margin-bottom: 0.25rem; }
+.share-controls input[type="email"] { padding: 0.6rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; flex-grow: 1; background-color: var(--input-bg-color); color: var(--text-color); }
+.share-controls button { padding: 0.6rem 1rem; background-color: var(--primary-button-bg-color); color: var(--primary-button-text-color); border: none; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+.share-controls button:hover { background-color: var(--primary-button-hover-bg-color); }
+.share-status { margin-top: 0.5rem; font-style: italic; color: var(--heading2-color); min-height: 1.2em; }
+.share-note { font-size: 0.85rem; color: var(--text-muted-color); margin-top: 1rem; text-align: center; }
 
+
+/* --- Light Mode Theme --- */
+body.light-mode {
+    --bg-color: #f4f4f8;
+    --text-color: #212529;
+    --text-muted-color: #6c757d;
+    --card-bg-color: #ffffff;
+    --card-border-color: #dee2e6;
+    --input-bg-color: #ffffff;
+    --input-border-color: #ced4da;
+    --input-disabled-bg-color: #e9ecef;
+    --input-disabled-text-color: #6c757d;
+    --button-bg-color: #f8f9fa;
+    --button-text-color: #212529;
+    --button-border-color: #dee2e6;
+    --button-hover-bg-color: #e2e6ea;
+    --button-hover-text-color: #212529;
+    --primary-button-bg-color: #007bff;
+    --primary-button-hover-bg-color: #0056b3;
+    --primary-button-text-color: #ffffff;
+    --secondary-button-bg-color: #6c757d;
+    --secondary-button-hover-bg-color: #5a6268;
+    --heading1-color: #007bff;
+    --heading2-color: #0056b3;
+    --heading3-color: #007bff;
+    --link-color: #007bff;
+    --link-hover-color: #0056b3;
+    --table-header-bg-color: #e9ecef;
+    --table-header-text-color: #495057;
+    --table-border-color: #dee2e6;
+    --table-row-hover-bg-color: #f1f3f5;
+    --table-footer-bg-color: #e9ecef;
+    --table-footer-text-color: #212529;
+    --table-selected-row-bg-color: #cfe2ff;
+    --highlight-green-bg: rgba(25, 135, 84, 0.15);
+    --highlight-green-text: #0f5132;
+    --highlight-red-bg: rgba(220, 53, 69, 0.1);
+    --highlight-red-text: #842029;
+    --spinner-color: #0d6efd;
+    --spinner-bg-color: rgba(13, 110, 253, 0.2);
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --chart-tick-color: #6c757d;
+    --chart-label-color: #212529;
+    --chart-bar-good-bg: rgba(25, 135, 84, 0.6); /* Bootstrap success */
+    --chart-bar-good-border: rgba(25, 135, 84, 1);
+    --chart-bar-bad-bg: rgba(220, 53, 69, 0.6); /* Bootstrap danger */
+    --chart-bar-bad-border: rgba(220, 53, 69, 1);
+    --chart-line-color: rgba(255, 193, 7, 1); /* Bootstrap warning */
+    --chart-line-bg: rgba(255, 193, 7, 0.2);
+}
+/* Ensure select options are readable in light mode */
+body.light-mode .filter-group select option {
+    background-color: var(--input-bg-color);
+    color: var(--text-color);
+}
 
 /* --- MEDIA QUERIES --- */
 @media (min-width: 768px) { /* Adjusted breakpoint */
@@ -206,6 +366,8 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     .share-controls { flex-direction: row; align-items: center; }
     .share-controls label { margin-bottom: 0; }
     .filter-group-store { grid-column: span 1; /* Reset span */ }
+    .filter-actions { justify-content: flex-end; } /* Align buttons to the right */
+    .apply-filters-button, .reset-filters-button { flex-basis: 150px; /* Give buttons a consistent base size */}
 }
 
 @media (min-width: 1200px) { /* Adjusted breakpoint */
@@ -219,4 +381,6 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     #attachRateTable th { font-size: 0.9rem; }
     #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
     .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
+    .header-controls { padding: 0 20px; }
+    .theme-toggle-button { right: 25px; }
 }
