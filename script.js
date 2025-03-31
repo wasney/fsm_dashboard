@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
-    let chartOptionsConfig = getChartOptions(); // Initialize chart options
+    // Initialize chart options based on the initially applied theme
+    let chartOptionsConfig; // Will be set after applying initial theme
 
     const TOP_N_CHART = 15; // Max items to show on the bar chart
 
@@ -40,10 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter Elements
     const regionFilter = document.getElementById('regionFilter');
     const districtFilter = document.getElementById('districtFilter');
-    // ** NEW: References to checkbox containers **
     const territoryFilterContainer = document.getElementById('territoryFilterContainer');
     const storeFilterContainer = document.getElementById('storeFilterContainer');
-    // Other filters remain the same
     const fsmFilter = document.getElementById('fsmFilter');
     const channelFilter = document.getElementById('channelFilter');
     const subchannelFilter = document.getElementById('subchannelFilter');
@@ -67,49 +66,65 @@ document.addEventListener('DOMContentLoaded', () => {
         return acc;
     }, {});
 
-    // Select/Deselect buttons remain the same
     const territorySelectAll = document.getElementById('territorySelectAll');
     const territoryDeselectAll = document.getElementById('territoryDeselectAll');
     const storeSelectAll = document.getElementById('storeSelectAll');
     const storeDeselectAll = document.getElementById('storeDeselectAll');
 
-    // Summary Elements (No changes needed)
+    // Summary Elements
     const revenueWithDFValue = document.getElementById('revenueWithDFValue');
     const qtdRevenueTargetValue = document.getElementById('qtdRevenueTargetValue');
-    // ... (rest of summary elements) ...
+    const qtdGapValue = document.getElementById('qtdGapValue');
+    const quarterlyRevenueTargetValue = document.getElementById('quarterlyRevenueTargetValue');
+    const percentQuarterlyStoreTargetValue = document.getElementById('percentQuarterlyStoreTargetValue');
+    const revARValue = document.getElementById('revARValue');
+    const unitsWithDFValue = document.getElementById('unitsWithDFValue');
+    const unitTargetValue = document.getElementById('unitTargetValue');
+    const unitAchievementValue = document.getElementById('unitAchievementValue');
+    const visitCountValue = document.getElementById('visitCountValue');
+    const trainingCountValue = document.getElementById('trainingCountValue');
+    const retailModeConnectivityValue = document.getElementById('retailModeConnectivityValue');
+    const repSkillAchValue = document.getElementById('repSkillAchValue');
+    const vPmrAchValue = document.getElementById('vPmrAchValue');
+    const postTrainingScoreValue = document.getElementById('postTrainingScoreValue');
     const eliteValue = document.getElementById('eliteValue');
     const percentQuarterlyTerritoryTargetP = document.getElementById('percentQuarterlyTerritoryTargetP');
-    // ... (rest of contextual summary elements) ...
+    const territoryRevPercentP = document.getElementById('territoryRevPercentP');
+    const districtRevPercentP = document.getElementById('districtRevPercentP');
+    const regionRevPercentP = document.getElementById('regionRevPercentP');
+    const percentQuarterlyTerritoryTargetValue = document.getElementById('percentQuarterlyTerritoryTargetValue');
+    const territoryRevPercentValue = document.getElementById('territoryRevPercentValue');
+    const districtRevPercentValue = document.getElementById('districtRevPercentValue');
     const regionRevPercentValue = document.getElementById('regionRevPercentValue');
 
 
-    // Table Elements (No changes needed)
+    // Table Elements
     const attachRateTableBody = document.getElementById('attachRateTableBody');
-    // ... (rest of table elements) ...
+    const attachRateTableFooter = document.getElementById('attachRateTableFooter');
+    const attachTableStatus = document.getElementById('attachTableStatus');
+    const attachRateTable = document.getElementById('attachRateTable');
     const exportCsvButton = document.getElementById('exportCsvButton');
 
-    // Chart Elements (No changes needed)
+    // Chart Elements
     const mainChartCanvas = document.getElementById('mainChartCanvas').getContext('2d');
-    // const secondaryChartCanvas = document.getElementById('secondaryChartCanvas').getContext('2d');
+    // const secondaryChartCanvas = document.getElementById('secondaryChartCanvas').getContext('2d'); // Placeholder
 
-    // Store Details Elements (No changes needed)
+    // Store Details Elements
     const storeDetailsSection = document.getElementById('storeDetailsSection');
-    // ... (rest of store detail elements) ...
+    const storeDetailsContent = document.getElementById('storeDetailsContent');
     const closeStoreDetailsButton = document.getElementById('closeStoreDetailsButton');
 
-    // Share Elements (No changes needed)
+    // Share Elements
     const emailRecipientInput = document.getElementById('emailRecipient');
-    // ... (rest of share elements) ...
+    const shareEmailButton = document.getElementById('shareEmailButton');
     const shareStatus = document.getElementById('shareStatus');
 
     // --- Global State ---
     let rawData = [];
     let filteredData = [];
     let mainChartInstance = null;
-    // let secondaryChartInstance = null;
-    // storeOptions now holds {value, text} for *available* stores based on hierarchy/search
+    // let secondaryChartInstance = null; // Placeholder
     let storeOptions = [];
-    // allPossibleStores holds {value, text} for *all* stores from the initial file load
     let allPossibleStores = [];
     let currentSort = { column: 'Store', ascending: true };
     let selectedStoreRow = null;
@@ -131,12 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const parsePercent = (value) => {
          if (value === null || value === undefined || value === '') return NaN;
-         if (typeof value === 'number') return value;
+         if (typeof value === 'number') return value; // Assume it's already decimal
          if (typeof value === 'string') {
             const num = parseFloat(value.replace('%', ''));
-            return isNaN(num) ? NaN : num / 100;
+            return isNaN(num) ? NaN : num / 100; // Convert to decimal, NaN if fails
          }
-         return NaN;
+         return NaN; // Default to NaN
     };
     const safeGet = (obj, path, defaultValue = 'N/A') => {
         const value = obj ? obj[path] : undefined;
@@ -144,13 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const isValidForAverage = (value) => {
          if (value === null || value === undefined || value === '') return false;
-         return !isNaN(parseNumber(String(value).replace('%','')));
+         // Check if it parses to a number (handles both numbers and numeric strings)
+         return !isNaN(parseNumber(String(value).replace('%',''))); // Check parseNumber after removing % just in case
     };
     const getUniqueValues = (data, column) => {
+        // Use safeGet with '' as default to handle potential missing values gracefully
         const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => val !== ''));
-        // Keep 'ALL' for single-select dropdowns, but maybe not strictly needed for checkbox logic?
-        // Let's return without 'ALL' for potential use in checkbox lists.
-        // return ['ALL', ...Array.from(values).sort()];
         return [...Array.from(values).sort()]; // Return sorted unique values only
     };
     const setOptions = (selectElement, options, disable = false) => { // For regular <select>
@@ -172,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
          selectElement.value = 'ALL'; // Default to ALL
     };
 
-    // ** NEW: Function to populate checkbox containers **
     const populateCheckboxMultiSelect = (containerElement, options, disable = false) => {
         if (!containerElement) return;
         containerElement.innerHTML = ''; // Clear existing checkboxes
@@ -183,17 +196,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (disable) {
             containerElement.dataset.placeholder = "-- Load File First --";
         } else {
-            // Remove placeholder when populated
-             delete containerElement.dataset.placeholder;
+             delete containerElement.dataset.placeholder; // Remove placeholder when populated
              options.forEach(optionValue => {
                 const label = document.createElement('label');
                 label.className = 'cb-item';
-                label.title = optionValue; // Add tooltip
+                label.title = optionValue;
 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = optionValue;
-                checkbox.name = containerElement.id; // Group checkboxes logically
+                checkbox.name = containerElement.id;
 
                 const text = document.createElement('span');
                 text.textContent = optionValue;
@@ -204,10 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Handle disabled state for the container
         containerElement.classList.toggle('disabled', disable);
 
-        // Disable Select/Deselect buttons based on container state
         const selectAllBtn = document.getElementById(`${containerElement.id.replace('Container', '')}SelectAll`);
         const deselectAllBtn = document.getElementById(`${containerElement.id.replace('Container', '')}DeselectAll`);
         if (selectAllBtn) selectAllBtn.disabled = disable || options.length === 0;
@@ -226,47 +236,101 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Theme Handling (No changes needed from previous step) ---
+    // --- Theme Handling ---
     const applyTheme = (theme) => {
-        // ... (keep existing applyTheme function) ...
         if (theme === 'light') {
             document.body.classList.add('light-mode');
-            themeToggleButton.textContent = '🌙';
+            themeToggleButton.textContent = '🌙'; // Moon icon for dark mode toggle
             themeToggleButton.title = 'Switch to Dark Mode';
-            if (themeMetaTag) themeMetaTag.content = '#f4f4f8';
+            if (themeMetaTag) themeMetaTag.content = '#f4f4f8'; // Light background color from CSS
         } else {
             document.body.classList.remove('light-mode');
-            themeToggleButton.textContent = '☀️';
+            themeToggleButton.textContent = '☀️'; // Sun icon for light mode toggle
             themeToggleButton.title = 'Switch to Light Mode';
-            if (themeMetaTag) themeMetaTag.content = '#1e1e1e';
+            if (themeMetaTag) themeMetaTag.content = '#1e1e1e'; // Dark background color
         }
-        chartOptionsConfig = getChartOptions(theme);
+        // Update chart options based on theme
+        chartOptionsConfig = getChartOptions(theme); // Update the global config
+        // Force chart redraw if it exists to apply colors
         if (mainChartInstance) {
+            // Merge new options, preserving data if possible, or just update fully
+            // Note: Fully replacing options might be safer for complex changes
             mainChartInstance.options = chartOptionsConfig;
-            mainChartInstance.update();
+            mainChartInstance.update(); // Redraw the chart
         }
+        // Add similar logic for secondaryChartInstance if/when implemented
     };
-    const toggleTheme = () => { /* ... (keep existing toggleTheme function) ... */
+
+    const toggleTheme = () => {
         const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         localStorage.setItem('dashboardTheme', newTheme);
         applyTheme(newTheme);
     };
-    function getChartOptions(theme = 'dark') { /* ... (keep existing getChartOptions function) ... */
+
+    // ** CORRECTED getChartOptions **
+    function getChartOptions(theme = 'dark') {
         const isLightMode = theme === 'light';
+        // Define colors based on theme
         const gridColor = isLightMode ? 'rgba(0, 0, 0, 0.1)' : 'rgba(224, 224, 224, 0.2)';
-        // ...(rest of the color definitions)...
+        const tickColor = isLightMode ? '#6c757d' : '#e0e0e0';
+        const labelColor = isLightMode ? '#212529' : '#e0e0e0';
+        // Define other colors needed for datasets
+        const barGoodBg = isLightMode ? 'rgba(25, 135, 84, 0.6)' : 'rgba(75, 192, 192, 0.6)';
+        const barGoodBorder = isLightMode ? 'rgba(25, 135, 84, 1)' : 'rgba(75, 192, 192, 1)';
+        const barBadBg = isLightMode ? 'rgba(220, 53, 69, 0.6)' : 'rgba(255, 99, 132, 0.6)';
+        const barBadBorder = isLightMode ? 'rgba(220, 53, 69, 1)' : 'rgba(255, 99, 132, 1)';
+        const lineTargetColor = isLightMode ? 'rgba(255, 193, 7, 1)' : 'rgba(255, 206, 86, 1)';
         const lineTargetBg = isLightMode ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 206, 86, 0.2)';
 
+        // Return the options object
         return {
-            // ...(rest of the chart options)...
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: tickColor, callback: (value) => formatCurrency(value) },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: tickColor },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { labels: { color: labelColor } },
+                tooltip: {
+                    backgroundColor: isLightMode ? '#ffffff' : '#2c2c2c',
+                    titleColor: isLightMode ? '#212529' : '#e0e0e0',
+                    bodyColor: isLightMode ? '#212529' : '#e0e0e0',
+                    callbacks: {
+                         label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed.y !== null) {
+                                 if (context.dataset.type === 'line' || context.dataset.label.toLowerCase().includes('target')) {
+                                      label += formatCurrency(context.parsed.y);
+                                 } else {
+                                      label += formatCurrency(context.parsed.y);
+                                       const storeName = context.label;
+                                       const storeData = filteredData.find(row => safeGet(row, 'Store', null) === storeName);
+                                       if(storeData){
+                                            const percentTarget = parsePercent(safeGet(storeData, '% Quarterly Revenue Target', 0));
+                                            label += ` (${formatPercent(percentTarget)} of Qtr Target)`;
+                                       }
+                                 }
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
              onClick: (event, elements) => {
                  if (elements.length > 0) {
                      const index = elements[0].index;
-                     // Ensure mainChartInstance exists and has data before accessing
                      const clickedLabel = mainChartInstance?.data?.labels?.[index];
-                     if (!clickedLabel) return; // Exit if label can't be found
-
+                      if (!clickedLabel) return;
                      const storeData = filteredData.find(row => safeGet(row, 'Store', null) === clickedLabel);
                      if (storeData) {
                          showStoreDetails(storeData);
@@ -274,22 +338,31 @@ document.addEventListener('DOMContentLoaded', () => {
                      }
                  }
              },
-            barGoodBg, barGoodBorder, barBadBg, barBadBorder, lineTargetColor, lineTargetBg
+             // Store theme-dependent colors directly within the returned object
+             // so updateCharts can access them easily.
+             colorDefaults: {
+                barGoodBg, barGoodBorder, barBadBg, barBadBorder, lineTargetColor, lineTargetBg
+             }
+             // **REMOVED incorrect line from previous attempt:**
+             // barGoodBg, barGoodBorder, barBadBg, barBadBorder, lineTargetColor, lineTargetBg // <- This was the error
         };
     }
 
 
     // --- Core Functions ---
 
-    const handleFile = async (event) => { /* ... (keep existing handleFile function structure) ... */
+    const handleFile = async (event) => {
         const file = event.target.files[0];
-        if (!file) { statusDiv.textContent = 'No file selected.'; return; }
+        if (!file) {
+            statusDiv.textContent = 'No file selected.';
+            return;
+        }
 
         statusDiv.textContent = 'Reading file...';
         showLoading(true);
         filterArea.style.display = 'none';
         resultsArea.style.display = 'none';
-        resetUI(false); // Reset UI but don't trigger apply filters yet
+        resetUI(false);
 
         try {
             const data = await file.arrayBuffer();
@@ -298,13 +371,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const worksheet = workbook.Sheets[firstSheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null });
 
-            if (jsonData.length > 0) { /* ... (header validation) ... */
+            if (jsonData.length > 0) {
                 const headers = Object.keys(jsonData[0]);
                 const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
                 if (missingHeaders.length > 0) {
                     console.warn(`Warning: Missing expected columns: ${missingHeaders.join(', ')}.`);
                 }
-            } else { throw new Error("Excel sheet appears to be empty."); }
+            } else {
+                throw new Error("Excel sheet appears to be empty.");
+            }
 
             rawData = jsonData;
             allPossibleStores = [...new Set(rawData.map(r => safeGet(r, 'Store', null)).filter(s => s))]
@@ -318,18 +393,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             applyFilters(); // Auto-apply filters
 
-        } catch (error) { /* ... (error handling) ... */
-             console.error('Error processing file:', error);
-             statusDiv.textContent = `Error: ${error.message}`;
-             rawData = []; allPossibleStores = []; filteredData = [];
-             resetUI(true); // Reset fully on error
-         } finally { /* ... (finally block) ... */
-             showLoading(false);
-             excelFileInput.value = '';
-         }
+        } catch (error) {
+            console.error('Error processing file:', error);
+            statusDiv.textContent = `Error: ${error.message}`;
+            rawData = [];
+            allPossibleStores = [];
+            filteredData = [];
+            resetUI(true); // Reset fully on error
+        } finally {
+            showLoading(false);
+            excelFileInput.value = '';
+        }
     };
 
-    // ** MODIFIED: Populate filters using new checkbox function **
     const populateFilters = (data) => {
         // Populate single-select dropdowns
         setOptions(regionFilter, getUniqueValues(data, 'REGION'));
@@ -340,11 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setOptions(dealerFilter, getUniqueValues(data, 'DEALER_NAME'));
 
         // Populate multi-select checkbox containers
-        const territoryOptions = getUniqueValues(data, 'Q2 Territory'); // Get unique values (no 'ALL')
-        populateCheckboxMultiSelect(territoryFilterContainer, territoryOptions, false); // Populate and enable
+        const territoryOptions = getUniqueValues(data, 'Q2 Territory');
+        populateCheckboxMultiSelect(territoryFilterContainer, territoryOptions, false);
 
-        storeOptions = [...allPossibleStores]; // Start with all stores available
-        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false); // Populate and enable stores
+        storeOptions = [...allPossibleStores];
+        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false);
 
         // Enable flag filters and search
         Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.disabled = false });
@@ -357,7 +433,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addDependencyFilterListeners();
     };
 
-    // ** MODIFIED: Add listeners for checkbox containers too **
     const addDependencyFilterListeners = () => {
         const handler = updateStoreFilterOptionsBasedOnHierarchy;
         // Standard filters
@@ -374,21 +449,18 @@ document.addEventListener('DOMContentLoaded', () => {
                  input.addEventListener('change', handler);
              }
         });
-        // ** NEW: Listen for changes within the Territory checkbox container **
+        // Territory checkbox container
         if (territoryFilterContainer) {
-             territoryFilterContainer.removeEventListener('change', handler); // Use container for event delegation
+             territoryFilterContainer.removeEventListener('change', handler);
              territoryFilterContainer.addEventListener('change', handler);
         }
-        // Note: Store filter changes *don't* trigger hierarchy updates, so no listener needed on storeFilterContainer itself for this handler.
     };
 
-    // ** MODIFIED: Update store options based on hierarchy, populating checkboxes **
      const updateStoreFilterOptionsBasedOnHierarchy = () => {
         if (rawData.length === 0) return;
 
         const selectedRegion = regionFilter.value;
         const selectedDistrict = districtFilter.value;
-        // ** NEW: Get selected territories from checkboxes **
         const selectedTerritories = territoryFilterContainer
             ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
             : [];
@@ -402,56 +474,47 @@ document.addEventListener('DOMContentLoaded', () => {
          });
 
         const potentiallyValidStoresData = rawData.filter(row => {
-            // Keep existing filter logic...
             if (selectedRegion !== 'ALL' && safeGet(row, 'REGION', null) !== selectedRegion) return false;
             if (selectedDistrict !== 'ALL' && safeGet(row, 'DISTRICT', null) !== selectedDistrict) return false;
-            // ** NEW: Check against selected territory checkboxes **
             if (selectedTerritories.length > 0 && !selectedTerritories.includes(safeGet(row, 'Q2 Territory', null))) return false;
             if (selectedFsm !== 'ALL' && safeGet(row, 'FSM NAME', null) !== selectedFsm) return false;
             if (selectedChannel !== 'ALL' && safeGet(row, 'CHANNEL', null) !== selectedChannel) return false;
             if (selectedSubchannel !== 'ALL' && safeGet(row, 'SUB_CHANNEL', null) !== selectedSubchannel) return false;
             if (selectedDealer !== 'ALL' && safeGet(row, 'DEALER_NAME', null) !== selectedDealer) return false;
 
-            for (const flag in selectedFlags) { /* ... keep flag logic ... */
-                const flagValue = safeGet(row, flag, 'NO');
+            for (const flag in selectedFlags) {
+                 const flagValue = safeGet(row, flag, 'NO');
                  if (!(flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1')) {
                     return false;
                  }
-             }
+            }
             return true;
         });
 
         const validStoreNames = new Set(potentiallyValidStoresData.map(row => safeGet(row, 'Store', null)).filter(Boolean));
-        // Update the global storeOptions array used by search/population
         storeOptions = Array.from(validStoreNames).sort().map(s => ({ value: s, text: s }));
 
-        // ** NEW: Get currently checked stores BEFORE repopulating **
         const previouslyCheckedStores = storeFilterContainer
             ? new Set(Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value))
             : new Set();
 
-        // ** NEW: Populate store checkbox container (this replaces setStoreFilterOptions) **
-        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false); // Update the checkboxes
+        populateCheckboxMultiSelect(storeFilterContainer, storeOptions.map(s => s.text), false);
 
-        // ** NEW: Re-apply the search filter if there was text in the search box **
-        filterStoreOptions(); // This updates the *visible* checkboxes based on search term
+        filterStoreOptions(); // Apply search term filter to the newly populated checkboxes
 
-        // ** NEW: Attempt to re-check previously checked stores *if* they are still visible **
+        // Re-check previously selected items that are still visible
         if (storeFilterContainer) {
             Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]')).forEach(checkbox => {
-                // Check if this checkbox's value was previously checked AND if its parent label is currently visible (not hidden by search)
                 if (previouslyCheckedStores.has(checkbox.value) && checkbox.closest('.cb-item').style.display !== 'none') {
                     checkbox.checked = true;
                 } else {
-                    checkbox.checked = false; // Ensure others are unchecked
+                    // Ensure checkboxes that shouldn't be checked (either not previously checked or now hidden by search) are unchecked
+                     checkbox.checked = false;
                 }
             });
         }
     };
 
-    // ** REMOVED setStoreFilterOptions function (replaced by populateCheckboxMultiSelect) **
-
-    // ** MODIFIED: Filter checkboxes based on search term (hides/shows labels) **
     const filterStoreOptions = () => {
         if (!storeFilterContainer) return;
         const searchTerm = storeSearch.value.toLowerCase();
@@ -460,31 +523,28 @@ document.addEventListener('DOMContentLoaded', () => {
         Array.from(storeFilterContainer.querySelectorAll('.cb-item')).forEach(item => {
             const labelText = item.textContent.toLowerCase();
             const matches = labelText.includes(searchTerm);
-            item.style.display = matches ? 'block' : 'none'; // Show or hide the label
+            item.style.display = matches ? 'block' : 'none';
             if (matches) {
                 visibleCount++;
             }
         });
 
-        // Update Select/Deselect All buttons based on *visible* options
         storeSelectAll.disabled = storeFilterContainer.classList.contains('disabled') || visibleCount === 0;
         storeDeselectAll.disabled = storeFilterContainer.classList.contains('disabled') || visibleCount === 0;
 
-        // Update placeholder if search yields no results
-        if (visibleCount === 0 && searchTerm !== '' && !storeFilterContainer.classList.contains('disabled')) {
+        // Update placeholder text based on visibility and state
+         if (storeFilterContainer.classList.contains('disabled')) {
+            storeFilterContainer.dataset.placeholder = "-- Load File First --";
+         } else if (storeOptions.length === 0) {
+             storeFilterContainer.dataset.placeholder = "-- No matching options --";
+         } else if (visibleCount === 0 && searchTerm !== '') {
             storeFilterContainer.dataset.placeholder = "-- No stores match search --";
-        } else if (visibleCount > 0 || storeFilterContainer.classList.contains('disabled')) {
-             delete storeFilterContainer.dataset.placeholder; // Remove placeholder if items are visible or container is disabled
-        } else if (searchTerm === '' && storeOptions.length === 0 && !storeFilterContainer.classList.contains('disabled')) {
-             storeFilterContainer.dataset.placeholder = "-- No matching options --"; // Show no options placeholder
-        } else {
-             delete storeFilterContainer.dataset.placeholder;
-        }
-
+         } else {
+            delete storeFilterContainer.dataset.placeholder;
+         }
     };
 
 
-    // ** MODIFIED: Apply filters using selected checkboxes **
     const applyFilters = () => {
         if (rawData.length === 0) { statusDiv.textContent = "Please load a file first."; return; }
         showLoading(true, true);
@@ -494,7 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const selectedRegion = regionFilter.value;
                 const selectedDistrict = districtFilter.value;
-                // ** NEW: Get values from Territory checkboxes **
                 const selectedTerritories = territoryFilterContainer
                     ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
                     : [];
@@ -502,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedChannel = channelFilter.value;
                 const selectedSubchannel = subchannelFilter.value;
                 const selectedDealer = dealerFilter.value;
-                // ** NEW: Get values from Store checkboxes **
                 const selectedStores = storeFilterContainer
                     ? Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
                     : [];
@@ -512,7 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  });
 
                 filteredData = rawData.filter(row => {
-                    // ** Update filter logic to use checkbox arrays **
                     if (selectedRegion !== 'ALL' && safeGet(row, 'REGION', null) !== selectedRegion) return false;
                     if (selectedDistrict !== 'ALL' && safeGet(row, 'DISTRICT', null) !== selectedDistrict) return false;
                     if (selectedTerritories.length > 0 && !selectedTerritories.includes(safeGet(row, 'Q2 Territory', null))) return false;
@@ -522,21 +579,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (selectedDealer !== 'ALL' && safeGet(row, 'DEALER_NAME', null) !== selectedDealer) return false;
                     if (selectedStores.length > 0 && !selectedStores.includes(safeGet(row, 'Store', null))) return false;
 
-                    for (const flag in selectedFlags) { /* ... keep flag logic ... */
-                         const flagValue = safeGet(row, flag, 'NO');
+                    for (const flag in selectedFlags) {
+                        const flagValue = safeGet(row, flag, 'NO');
                          if (!(flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1')) {
                             return false;
                          }
-                     }
+                    }
                     return true;
                 });
 
-                // Update UI (no changes needed here)
                 updateSummary(filteredData);
                 updateCharts(filteredData);
                 updateAttachRateTable(filteredData);
 
-                if (filteredData.length === 1) { /* ... (show details logic) ... */
+                if (filteredData.length === 1) {
                     showStoreDetails(filteredData[0]);
                     highlightTableRow(safeGet(filteredData[0], 'Store', null));
                  } else { hideStoreDetails(); }
@@ -545,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultsArea.style.display = 'block';
                 exportCsvButton.disabled = filteredData.length === 0;
 
-            } catch (error) { /* ... (error handling) ... */
+            } catch (error) {
                  console.error("Error applying filters:", error);
                  statusDiv.textContent = "Error applying filters. Check console for details.";
                  filteredData = []; resultsArea.style.display = 'none'; exportCsvButton.disabled = true;
@@ -554,12 +610,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     };
 
-    // ** MODIFIED: Reset function to handle checkboxes **
     const resetFilters = () => {
-        // Reset dropdowns
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { if (sel) { sel.value = 'ALL'; } });
 
-         // ** NEW: Uncheck all checkboxes in containers **
          if (territoryFilterContainer) {
             territoryFilterContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
          }
@@ -567,18 +620,9 @@ document.addEventListener('DOMContentLoaded', () => {
             storeFilterContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
          }
 
-         // Reset search input
          if (storeSearch) { storeSearch.value = ''; }
-
-         // Reset flag checkboxes
          Object.values(flagFiltersCheckboxes).forEach(input => { if(input) {input.checked = false;} });
-
-         // IMPORTANT: Update the dynamic store filter based on the reset hierarchy filters
          updateStoreFilterOptionsBasedOnHierarchy();
-         // After updating store options, clear the search filter visually
-         // filterStoreOptions(); // updateStoreFilterOptions... calls this now
-
-         // Reset sort state for the table
          currentSort = { column: 'Store', ascending: true };
     };
 
@@ -587,23 +631,21 @@ document.addEventListener('DOMContentLoaded', () => {
          applyFilters();
      };
 
-     const resetUI = (apply = true) => { /* ... (keep existing resetUI, ensuring it disables containers if needed) ... */
+     const resetUI = (apply = true) => {
          resetFilters();
 
          const disable = rawData.length === 0;
-         // Disable standard elements
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter, storeSearch, territorySelectAll, territoryDeselectAll, storeSelectAll, storeDeselectAll, applyFiltersButton, resetFiltersButton, exportCsvButton].forEach(el => {if(el) el.disabled = disable});
          Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.disabled = disable });
-         // Disable checkbox containers
+         // Use populate function to handle disable state and placeholder for checkbox lists
          if (territoryFilterContainer) populateCheckboxMultiSelect(territoryFilterContainer, [], disable);
-         if (storeFilterContainer) populateCheckboxMultiSelect(storeFilterContainer, [], disable); // Use the population function to handle disable/placeholder
+         if (storeFilterContainer) populateCheckboxMultiSelect(storeFilterContainer, [], disable);
 
 
          if (disable) { statusDiv.textContent = 'No file selected.'; }
 
          if (filterArea) filterArea.style.display = disable ? 'none' : 'block';
          if (resultsArea) resultsArea.style.display = 'none';
-         // ...(clear chart, table, details, summary)...
          if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
          if (attachRateTableBody) attachRateTableBody.innerHTML = '';
          if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
@@ -611,9 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
          hideStoreDetails();
          updateSummary([]);
 
-         // Remove dependency listeners
          const handler = updateStoreFilterOptionsBasedOnHierarchy;
-          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter, territoryFilterContainer].forEach(el => { // Include territory container
+          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter, territoryFilterContainer].forEach(el => {
               if (el) el.removeEventListener('change', handler);
           });
           Object.values(flagFiltersCheckboxes).forEach(input => {
@@ -624,42 +665,355 @@ document.addEventListener('DOMContentLoaded', () => {
          if (apply && !disable) { applyFilters(); }
      };
 
-    // --- UPDATED updateSummary (No changes needed here) ---
-    const updateSummary = (data) => { /* ... (keep existing updateSummary) ... */ };
+    const updateSummary = (data) => {
+        const totalCount = data.length;
 
-    // --- UPDATED updateContextualSummary (No changes needed here) ---
-    const updateContextualSummary = (data) => { /* ... (keep existing updateContextualSummary) ... */ };
+        const fieldsToClear = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
+                        percentQuarterlyStoreTargetValue, revARValue, unitsWithDFValue, unitTargetValue,
+                        unitAchievementValue, visitCountValue, trainingCountValue, retailModeConnectivityValue,
+                        repSkillAchValue, vPmrAchValue, postTrainingScoreValue, eliteValue,
+                        percentQuarterlyTerritoryTargetValue, territoryRevPercentValue, districtRevPercentValue, regionRevPercentValue];
+        fieldsToClear.forEach(el => { if (el) el.textContent = 'N/A'; });
+        [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => { if(p) p.style.display = 'none';});
 
-    // --- UPDATED updateCharts (No changes needed here, theme handled separately) ---
-    const updateCharts = (data) => { /* ... (keep existing updateCharts) ... */ };
+        if (totalCount === 0) { return; }
 
-    // --- UPDATED updateAttachRateTable (No changes needed here) ---
-    const updateAttachRateTable = (data) => { /* ... (keep existing updateAttachRateTable) ... */ };
+        // Calculate SUMS
+        const sumRevenue = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Revenue w/DF', 0)), 0);
+        const sumQtdTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'QTD Revenue Target', 0)), 0);
+        const sumQuarterlyTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Quarterly Revenue Target', 0)), 0);
+        const sumUnits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Unit w/ DF', 0)), 0);
+        const sumUnitTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Unit Target', 0)), 0);
+        const sumVisits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Visit count', 0)), 0);
+        const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
 
-    // --- UPDATED handleSort (No changes needed here) ---
-    const handleSort = (event) => { /* ... (keep existing handleSort) ... */ };
+        // Calculate AVERAGES (excluding blanks/invalid values)
+        let sumRevAR = 0, countRevAR = 0;
+        let sumConnectivity = 0, countConnectivity = 0;
+        let sumRepSkill = 0, countRepSkill = 0;
+        let sumPmr = 0, countPmr = 0;
+        let sumPostTraining = 0, countPostTraining = 0;
+        let sumElite = 0, countElite = 0;
 
-    // --- UPDATED updateSortArrows (No changes needed here) ---
-    const updateSortArrows = () => { /* ... (keep existing updateSortArrows) ... */ };
+        data.forEach(row => {
+            let val;
+            val = safeGet(row, 'Rev AR%', null); if (isValidForAverage(val)) { sumRevAR += parsePercent(val); countRevAR++; }
+            val = safeGet(row, 'Retail Mode Connectivity', null); if (isValidForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
+            val = safeGet(row, 'Rep Skill Ach', null); if (isValidForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
+            val = safeGet(row, '(V)PMR Ach', null); if (isValidForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
+            val = safeGet(row, 'Post Training Score', null); if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; }
+            val = safeGet(row, 'Elite', null); if (isValidForAverage(val)) { sumElite += parsePercent(val); countElite++; }
+        });
 
-    // --- UPDATED showStoreDetails (No changes needed here) ---
-    const showStoreDetails = (storeData) => { /* ... (keep existing showStoreDetails) ... */ };
+        const avgRevAR = countRevAR === 0 ? NaN : sumRevAR / countRevAR;
+        const avgConnectivity = countConnectivity === 0 ? NaN : sumConnectivity / countConnectivity;
+        const avgRepSkill = countRepSkill === 0 ? NaN : sumRepSkill / countRepSkill;
+        const avgPmr = countPmr === 0 ? NaN : sumPmr / countPmr;
+        const avgPostTraining = countPostTraining === 0 ? NaN : sumPostTraining / countPostTraining;
+        const avgElite = countElite === 0 ? NaN : sumElite / countElite;
 
-    // --- UPDATED hideStoreDetails (No changes needed here) ---
-    const hideStoreDetails = () => { /* ... (keep existing hideStoreDetails) ... */ };
+        const overallPercentStoreTarget = sumQuarterlyTarget === 0 ? 0 : sumRevenue / sumQuarterlyTarget;
+        const overallUnitAchievement = sumUnitTarget === 0 ? 0 : sumUnits / sumUnitTarget;
 
-     // --- UPDATED highlightTableRow (No changes needed here) ---
-     const highlightTableRow = (storeName) => { /* ... (keep existing highlightTableRow) ... */ };
+        // Update DOM Elements (Simplified view, original logic remains)
+        revenueWithDFValue && (revenueWithDFValue.textContent = formatCurrency(sumRevenue));
+        // ... (rest of DOM updates for sums and averages) ...
+        eliteValue && (eliteValue.textContent = formatPercent(avgElite));
 
-    // --- UPDATED exportData (No changes needed here) ---
+
+        updateContextualSummary(data);
+    };
+
+    const updateContextualSummary = (data) => {
+        [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
+        if (data.length === 0) return;
+
+        const singleRegion = regionFilter.value !== 'ALL';
+        const singleDistrict = districtFilter.value !== 'ALL';
+        // Update check for single territory based on checkbox container
+        const selectedTerritoriesCount = territoryFilterContainer
+             ? territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked').length
+             : 0;
+        const singleTerritory = selectedTerritoriesCount === 1;
+
+
+        const calculateAverageExcludeBlanks = (column) => {
+            let sum = 0, count = 0;
+            data.forEach(row => {
+                const val = safeGet(row, column, null);
+                if (isValidForAverage(val)) { sum += parsePercent(val); count++; }
+            });
+            return count === 0 ? NaN : sum / count;
+        };
+
+        const avgPercentTerritoryTarget = calculateAverageExcludeBlanks('%Quarterly Territory Rev Target');
+        const avgTerritoryRevPercent = calculateAverageExcludeBlanks('Territory Rev%');
+        const avgDistrictRevPercent = calculateAverageExcludeBlanks('District Rev%');
+        const avgRegionRevPercent = calculateAverageExcludeBlanks('Region Rev%');
+
+        if (percentQuarterlyTerritoryTargetValue) percentQuarterlyTerritoryTargetValue.textContent = formatPercent(avgPercentTerritoryTarget);
+        if (percentQuarterlyTerritoryTargetP) percentQuarterlyTerritoryTargetP.style.display = 'block';
+
+        if (singleTerritory || singleDistrict || singleRegion) {
+             if (territoryRevPercentValue) territoryRevPercentValue.textContent = formatPercent(avgTerritoryRevPercent);
+             if (territoryRevPercentP) territoryRevPercentP.style.display = 'block';
+        }
+        if (singleDistrict || singleRegion) {
+             if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent);
+             if (districtRevPercentP) districtRevPercentP.style.display = 'block';
+        }
+         if (singleRegion) {
+             if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent);
+             if (regionRevPercentP) regionRevPercentP.style.display = 'block';
+         }
+    };
+
+    const updateCharts = (data) => {
+        if (mainChartInstance) {
+            mainChartInstance.destroy();
+            mainChartInstance = null;
+        }
+
+        if (data.length === 0 || !mainChartCanvas) return;
+
+        const sortedData = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', 0)) - parseNumber(safeGet(a, 'Revenue w/DF', 0)));
+        const chartData = sortedData.slice(0, TOP_N_CHART);
+
+        const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown'));
+        const revenueDataSet = chartData.map(row => parseNumber(safeGet(row, 'Revenue w/DF', 0)));
+        const targetDataSet = chartData.map(row => parseNumber(safeGet(row, 'QTD Revenue Target', 0)));
+
+        // Access theme-specific colors from the global options config
+        const { barGoodBg, barGoodBorder, barBadBg, barBadBorder, lineTargetColor, lineTargetBg } = chartOptionsConfig.colorDefaults;
+
+        const backgroundColors = chartData.map((row, index) => {
+             const revenue = revenueDataSet[index];
+             const target = targetDataSet[index];
+             return revenue >= target ? barGoodBg : barBadBg;
+        });
+        const borderColors = chartData.map((row, index) => {
+             const revenue = revenueDataSet[index];
+             const target = targetDataSet[index];
+             return revenue >= target ? barGoodBorder : barBadBorder;
+        });
+
+        mainChartInstance = new Chart(mainChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Revenue (incl. DF)',
+                        data: revenueDataSet,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'QTD Revenue Target',
+                        data: targetDataSet,
+                        type: 'line',
+                        borderColor: lineTargetColor, // Use theme color
+                        backgroundColor: lineTargetBg, // Use theme color
+                        fill: false,
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: chartOptionsConfig // Use the centrally managed options object
+        });
+    };
+
+    const updateAttachRateTable = (data) => {
+        if (!attachRateTableBody || !attachRateTableFooter) return;
+        attachRateTableBody.innerHTML = '';
+        attachRateTableFooter.innerHTML = '';
+
+        if (data.length === 0) {
+            if(attachTableStatus) attachTableStatus.textContent = 'No data to display based on filters.';
+            return;
+        }
+
+        const sortedData = [...data].sort((a, b) => {
+             let valA = safeGet(a, currentSort.column, null);
+             let valB = safeGet(b, currentSort.column, null);
+             if (valA === null && valB === null) return 0;
+             if (valA === null) return currentSort.ascending ? -1 : 1;
+             if (valB === null) return currentSort.ascending ? 1 : -1;
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%') || currentSort.column.includes('Target');
+             const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA);
+             const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
+             if (!isNaN(numA) && !isNaN(numB)) { return currentSort.ascending ? numA - numB : numB - numA; }
+             else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+         });
+
+        const averageMetrics = ['% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'];
+        const averages = {};
+        averageMetrics.forEach(key => {
+             let sum = 0, count = 0;
+             data.forEach(row => {
+                 const val = safeGet(row, key, null);
+                 if (isValidForAverage(val)) { sum += parsePercent(val); count++; }
+             });
+             averages[key] = count === 0 ? NaN : sum / count;
+         });
+
+        sortedData.forEach(row => {
+            const tr = document.createElement('tr');
+            const storeName = safeGet(row, 'Store', null);
+            if (storeName) {
+                 tr.dataset.storeName = storeName;
+                 tr.onclick = () => { showStoreDetails(row); highlightTableRow(storeName); };
+
+                 const columns = [ /* ... column definitions ... */
+                     { key: 'Store', format: (val) => val },
+                     { key: '% Quarterly Revenue Target', format: formatPercent, highlight: true },
+                     { key: 'Tablet Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'PC Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'NC Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'TWS Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'WW Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'ME Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'NCME Attach Rate', format: formatPercent, highlight: true },
+                 ];
+
+                 columns.forEach(col => {
+                     const td = document.createElement('td');
+                     const rawValue = safeGet(row, col.key, null);
+                     const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('%');
+                     const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue);
+                     let formattedValue = (rawValue === null || (col.key !== 'Store' && isNaN(numericValue)))
+                                         ? 'N/A'
+                                         : (isPercentCol ? col.format(numericValue) : rawValue);
+                     td.textContent = formattedValue;
+                     td.title = `${col.key}: ${formattedValue}`;
+                     if (col.highlight && averages[col.key] !== undefined && !isNaN(numericValue)) {
+                          td.classList.toggle('highlight-green', numericValue >= averages[col.key]);
+                          td.classList.toggle('highlight-red', numericValue < averages[col.key]);
+                      }
+                     tr.appendChild(td);
+                 });
+                 attachRateTableBody.appendChild(tr);
+             }
+        });
+
+        if (data.length > 0) {
+            const footerRow = attachRateTableFooter.insertRow();
+             const avgLabelCell = footerRow.insertCell();
+             avgLabelCell.textContent = 'Filtered Avg*';
+             avgLabelCell.title = 'Average calculated only using stores with valid data for each column';
+             avgLabelCell.style.textAlign = "right";
+             avgLabelCell.style.fontWeight = "bold";
+             averageMetrics.forEach(key => {
+                 const td = footerRow.insertCell();
+                 const avgValue = averages[key];
+                 td.textContent = formatPercent(avgValue);
+                 let validCount = data.filter(row => isValidForAverage(safeGet(row, key, null))).length;
+                 td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`;
+                 td.style.textAlign = "right";
+             });
+         }
+
+        if(attachTableStatus) attachTableStatus.textContent = `Showing ${sortedData.length} stores. Click row for details. Click headers to sort.`;
+        updateSortArrows();
+    };
+
+    const handleSort = (event) => {
+         const headerCell = event.target.closest('th');
+         if (!headerCell || !headerCell.classList.contains('sortable')) return;
+         const sortKey = headerCell.dataset.sort;
+         if (!sortKey) return;
+         if (currentSort.column === sortKey) { currentSort.ascending = !currentSort.ascending; }
+         else { currentSort.column = sortKey; currentSort.ascending = true; }
+         updateAttachRateTable(filteredData);
+    };
+
+
+    const updateSortArrows = () => {
+        if (!attachRateTable) return;
+        attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => {
+            arrow.className = 'sort-arrow';
+            arrow.textContent = '';
+        });
+        const currentHeader = attachRateTable.querySelector(`th[data-sort="${currentSort.column}"] .sort-arrow`);
+        if (currentHeader) {
+            currentHeader.classList.add(currentSort.ascending ? 'asc' : 'desc');
+            currentHeader.textContent = currentSort.ascending ? ' ▲' : ' ▼';
+        }
+    };
+
+    const showStoreDetails = (storeData) => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+
+        const addressParts = [safeGet(storeData, 'ADDRESS1', null), safeGet(storeData, 'CITY', null), safeGet(storeData, 'STATE', null), safeGet(storeData, 'ZIPCODE', null)].filter(Boolean);
+        const addressString = addressParts.length > 0 ? addressParts.join(', ') : null;
+
+        const latitude = parseFloat(safeGet(storeData, 'LATITUDE_ORG', NaN));
+        const longitude = parseFloat(safeGet(storeData, 'LONGITUDE_ORG', NaN));
+        let mapsLinkHtml = '';
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            mapsLinkHtml = `<p><a href="${mapsUrl}" target="_blank" title="Open in Google Maps">View on Google Maps</a></p>`;
+        } else {
+            mapsLinkHtml = `<p style="color: var(--text-muted-color); font-style: italic;">(Map coordinates not available)</p>`;
+        }
+
+        let flagSummaryHtml = FLAG_HEADERS.map(flag => {
+            const flagValue = safeGet(storeData, flag);
+            const isTrue = (flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1');
+            return `<span title="${flag}" data-flag="${isTrue}">${flag.replace(/_/g, ' ')} ${isTrue ? '✔' : '✘'}</span>`;
+        }).join(' | ');
+
+        let detailsHtml = `<p><strong>Store:</strong> ${safeGet(storeData, 'Store')}</p>`;
+        if (addressString) { detailsHtml += `<p><strong>Address:</strong> ${addressString}</p>`; }
+        detailsHtml += mapsLinkHtml;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>IDs:</strong> Store: ${safeGet(storeData, 'STORE ID')} | Org: ${safeGet(storeData, 'ORG_STORE_ID')} | CV: ${safeGet(storeData, 'CV_STORE_ID')} | CinglePoint: ${safeGet(storeData, 'CINGLEPOINT_ID')}</p>`;
+        detailsHtml += `<p><strong>Type:</strong> ${safeGet(storeData, 'STORE_TYPE_NAME')} | Nat Tier: ${safeGet(storeData, 'National_Tier')} | Merch Lvl: ${safeGet(storeData, 'Merchandising_Level')} | Comb Tier: ${safeGet(storeData, 'Combined_Tier')}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Hierarchy:</strong> ${safeGet(storeData, 'REGION')} > ${safeGet(storeData, 'DISTRICT')} > ${safeGet(storeData, 'Q2 Territory')}</p>`;
+        detailsHtml += `<p><strong>FSM:</strong> ${safeGet(storeData, 'FSM NAME')}</p>`;
+        detailsHtml += `<p><strong>Channel:</strong> ${safeGet(storeData, 'CHANNEL')} / ${safeGet(storeData, 'SUB_CHANNEL')}</p>`;
+        detailsHtml += `<p><strong>Dealer:</strong> ${safeGet(storeData, 'DEALER_NAME')}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Visits:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Visit count', 0)))} | <strong>Trainings:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Trainings', 0)))}</p>`;
+        detailsHtml += `<p><strong>Connectivity:</strong> ${formatPercent(parsePercent(safeGet(storeData, 'Retail Mode Connectivity', 0)))}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Flags:</strong> ${flagSummaryHtml}</p>`;
+
+        storeDetailsContent.innerHTML = detailsHtml;
+        storeDetailsSection.style.display = 'block';
+        closeStoreDetailsButton.style.display = 'inline-block';
+    };
+
+    const hideStoreDetails = () => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+        storeDetailsContent.innerHTML = 'Select a store from the table or chart for details, or apply filters resulting in a single store.';
+        storeDetailsSection.style.display = 'none';
+        closeStoreDetailsButton.style.display = 'none';
+        highlightTableRow(null);
+    };
+
+     const highlightTableRow = (storeName) => {
+         if (selectedStoreRow) { selectedStoreRow.classList.remove('selected-row'); }
+        if (storeName && attachRateTableBody) {
+             try {
+                 selectedStoreRow = attachRateTableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
+                 if (selectedStoreRow) { selectedStoreRow.classList.add('selected-row'); }
+                 else { selectedStoreRow = null; }
+             } catch (e) { console.error("Error selecting table row:", e); selectedStoreRow = null; }
+         } else { selectedStoreRow = null; }
+    };
+
     const exportData = () => { /* ... (keep existing exportData) ... */ };
 
-    // ** MODIFIED: getFilterSummary to read from checkboxes **
     const getFilterSummary = () => {
         let summary = [];
         if (regionFilter?.value !== 'ALL') summary.push(`Region: ${regionFilter.value}`);
         if (districtFilter?.value !== 'ALL') summary.push(`District: ${districtFilter.value}`);
-        // ** NEW: Read from territory checkboxes **
         const territories = territoryFilterContainer
             ? Array.from(territoryFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
             : [];
@@ -669,7 +1023,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (channelFilter?.value !== 'ALL') summary.push(`Channel: ${channelFilter.value}`);
         if (subchannelFilter?.value !== 'ALL') summary.push(`Subchannel: ${subchannelFilter.value}`);
         if (dealerFilter?.value !== 'ALL') summary.push(`Dealer: ${dealerFilter.value}`);
-        // ** NEW: Read from store checkboxes **
         const stores = storeFilterContainer
              ? Array.from(storeFilterContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
              : [];
@@ -680,44 +1033,41 @@ document.addEventListener('DOMContentLoaded', () => {
         return summary.length > 0 ? summary.join('; ') : 'None';
     };
 
-    // --- UPDATED generateEmailBody (uses getFilterSummary, no direct changes needed) ---
-    const generateEmailBody = () => { /* ... (keep existing generateEmailBody) ... */ };
 
-    // --- UPDATED handleShareEmail (No changes needed here) ---
+    const generateEmailBody = () => { /* ... (keep existing generateEmailBody) ... */ };
     const handleShareEmail = () => { /* ... (keep existing handleShareEmail) ... */ };
 
-     // ** MODIFIED: Select/Deselect All for Checkbox Containers **
-     const selectAllOptions = (containerElementOrSelect) => {
-         if (!containerElementOrSelect) return;
-         // Check if it's one of our checkbox containers
-         if (containerElementOrSelect.classList.contains('checkbox-multiselect')) {
-             containerElementOrSelect.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                 // Only check visible checkboxes (respecting search filter)
-                 if (cb.closest('.cb-item').style.display !== 'none') {
+     const selectAllOptions = (containerElement) => {
+         if (!containerElement || !containerElement.classList.contains('checkbox-multiselect')) return;
+         let changed = false;
+         containerElement.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+             if (cb.closest('.cb-item').style.display !== 'none') { // Only check visible
+                 if (!cb.checked) {
                      cb.checked = true;
+                     changed = true;
                  }
-             });
-             // Trigger change event manually on the container if needed for dependency updates
-             containerElementOrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-         } else if (containerElementOrSelect.tagName === 'SELECT') { // Handle original select elements if any remain
-              Array.from(containerElementOrSelect.options).forEach(option => option.selected = true);
-              containerElementOrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-         }
+             }
+         });
+          // Trigger change *once* after loop if any checkbox was changed
+          if (changed) {
+             containerElement.dispatchEvent(new Event('change', { bubbles: true }));
+          }
     };
 
-     const deselectAllOptions = (containerElementOrSelect) => {
-         if (!containerElementOrSelect) return;
-         if (containerElementOrSelect.classList.contains('checkbox-multiselect')) {
-             containerElementOrSelect.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                 // Only deselect visible checkboxes
-                  if (cb.closest('.cb-item').style.display !== 'none') {
-                      cb.checked = false;
-                  }
-             });
-             containerElementOrSelect.dispatchEvent(new Event('change', { bubbles: true }));
-         } else if (containerElementOrSelect.tagName === 'SELECT') {
-              containerElementOrSelect.selectedIndex = -1;
-              containerElementOrSelect.dispatchEvent(new Event('change', { bubbles: true }));
+     const deselectAllOptions = (containerElement) => {
+         if (!containerElement || !containerElement.classList.contains('checkbox-multiselect')) return;
+          let changed = false;
+         containerElement.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+              if (cb.closest('.cb-item').style.display !== 'none') { // Only uncheck visible
+                 if (cb.checked) {
+                     cb.checked = false;
+                     changed = true;
+                 }
+             }
+         });
+         // Trigger change *once* after loop if any checkbox was changed
+         if (changed) {
+            containerElement.dispatchEvent(new Event('change', { bubbles: true }));
          }
     };
 
@@ -727,22 +1077,23 @@ document.addEventListener('DOMContentLoaded', () => {
     applyFiltersButton?.addEventListener('click', applyFilters);
     resetFiltersButton?.addEventListener('click', handleResetFilters);
     themeToggleButton?.addEventListener('click', toggleTheme);
-    storeSearch?.addEventListener('input', filterStoreOptions); // Keep listener on search input
+    storeSearch?.addEventListener('input', filterStoreOptions);
     exportCsvButton?.addEventListener('click', exportData);
     shareEmailButton?.addEventListener('click', handleShareEmail);
     closeStoreDetailsButton?.addEventListener('click', hideStoreDetails);
 
-    // ** MODIFIED: Point Select/Deselect to new checkbox containers **
-    territorySelectAll?.addEventListener('click', () => { selectAllOptions(territoryFilterContainer); /* Dependency handled by container listener */ });
-    territoryDeselectAll?.addEventListener('click', () => { deselectAllOptions(territoryFilterContainer); /* Dependency handled by container listener */ });
-    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilterContainer)); // No hierarchy update needed here
-    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilterContainer)); // No hierarchy update needed here
+    territorySelectAll?.addEventListener('click', () => selectAllOptions(territoryFilterContainer));
+    territoryDeselectAll?.addEventListener('click', () => deselectAllOptions(territoryFilterContainer));
+    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilterContainer));
+    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilterContainer));
 
     attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
 
     // --- Initial Setup ---
     const savedTheme = localStorage.getItem('dashboardTheme') || 'dark';
+    // Apply theme *first* so getChartOptions has the correct context
     applyTheme(savedTheme);
+    // Reset UI without triggering applyFilters (handleFile does this on load)
     resetUI(false);
 
 }); // End DOMContentLoaded
