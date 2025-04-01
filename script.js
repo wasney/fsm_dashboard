@@ -1,9 +1,10 @@
+/* Generated: 2025-03-31 10:34:53 PM EDT - Removed "% QTR REV TARGET" column from Attach Rates table and related calculations/references. */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
         'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
         'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
-        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%',
+        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%', // Keep '% Quarterly Revenue Target' for summary & potentially chart tooltip
         'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
         'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
         'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
@@ -710,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (singleDistrict || singleRegion) {
              if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent);
              if (districtRevPercentP) districtRevPercentP.style.display = 'block';
-        }
+         }
          if (singleRegion) {
              if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent);
              if (regionRevPercentP) regionRevPercentP.style.display = 'block';
@@ -849,7 +850,8 @@ document.addEventListener('DOMContentLoaded', () => {
              if (valB === null) return currentSort.ascending ? 1 : -1; // Nulls first when ascending
 
              // Attempt numeric conversion for sorting if applicable (percentages or numbers)
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%') || currentSort.column.includes('Target'); // Adjust column check as needed
+             // Adjusted column check as % Quarterly Revenue Target is removed from the table
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%');
              const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA);
              const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
 
@@ -866,8 +868,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         // Calculate averages for highlighting AND footer (excluding blanks)
+        // Removed '% Quarterly Revenue Target' from metrics to average
         const averageMetrics = [
-             '% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
+             'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
              'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
         ];
         const averages = {};
@@ -896,9 +899,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  };
 
                  // Define columns and their formatting/highlighting logic
+                 // Removed '% Quarterly Revenue Target' column definition
                  const columns = [
                      { key: 'Store', format: (val) => val }, // Keep store name as is
-                     { key: '% Quarterly Revenue Target', format: formatPercent, highlight: true },
                      { key: 'Tablet Attach Rate', format: formatPercent, highlight: true },
                      { key: 'PC Attach Rate', format: formatPercent, highlight: true },
                      { key: 'NC Attach Rate', format: formatPercent, highlight: true },
@@ -912,6 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      const td = document.createElement('td');
                      const rawValue = safeGet(row, col.key, null); // Get raw value safely
                      // Determine if parsing as percent is needed
+                     // Adjusted isPercentCol check slightly as % Target is gone
                      const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('%');
                      // Use parsePercent for percent-like columns, parseNumber otherwise, to get numeric value for comparison
                      const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue);
@@ -953,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
             avgLabelCell.style.textAlign = "right";
             avgLabelCell.style.fontWeight = "bold";
 
-            // Use the same metrics keys used for calculation
+            // Use the same metrics keys used for calculation (which no longer includes % Qtr Rev Target)
             averageMetrics.forEach(key => {
                  const td = footerRow.insertCell();
                  const avgValue = averages[key]; // Already calculated excluding blanks
@@ -994,11 +998,16 @@ document.addEventListener('DOMContentLoaded', () => {
             arrow.classList.remove('asc', 'desc');
             arrow.textContent = ''; // Clear arrow text
         });
-        const currentHeader = attachRateTable.querySelector(`th[data-sort="${currentSort.column}"] .sort-arrow`);
-        if (currentHeader) {
-            currentHeader.classList.add(currentSort.ascending ? 'asc' : 'desc');
-            // Add arrow character for visual cue
-            currentHeader.textContent = currentSort.ascending ? ' ▲' : ' ▼'; // Add space before arrow
+        // Safely attempt to query the header using CSS.escape for potentially complex names
+        try {
+            const currentHeader = attachRateTable.querySelector(`th[data-sort="${CSS.escape(currentSort.column)}"] .sort-arrow`);
+            if (currentHeader) {
+                currentHeader.classList.add(currentSort.ascending ? 'asc' : 'desc');
+                // Add arrow character for visual cue
+                currentHeader.textContent = currentSort.ascending ? ' ▲' : ' ▼'; // Add space before arrow
+            }
+        } catch (e) {
+            console.error("Error updating sort arrows for column:", currentSort.column, e);
         }
     };
 
@@ -1020,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const longitude = parseFloat(safeGet(storeData, 'LONGITUDE_ORG', NaN));
         let mapsLinkHtml = '';
         if (!isNaN(latitude) && !isNaN(longitude)) {
-            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`; // Corrected Maps URL
             mapsLinkHtml = `<p><a href="${mapsUrl}" target="_blank" title="Open in Google Maps">View on Google Maps</a></p>`;
         } else {
             mapsLinkHtml = `<p style="color: #aaa; font-style: italic;">(Map coordinates not available)</p>`;
@@ -1102,12 +1111,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             if (!attachRateTable) throw new Error("Attach rate table not found.");
-            const headers = Array.from(attachRateTable.querySelectorAll('thead th')).map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim()); // Get clean headers
+            // Get headers directly from the updated HTML table header structure
+            const headers = Array.from(attachRateTable.querySelectorAll('thead th'))
+                                  .map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim()); // Get clean headers
+
              const dataToExport = filteredData.map(row => {
                 return headers.map(header => {
-                    let value = safeGet(row, header, ''); // Get raw value, default to empty string
-                     // Check if the column header indicates a percentage or rate
-                    const isPercentLike = header.includes('%') || header.includes('Rate') || header.includes('Ach') || header.includes('Connectivity') || header.includes('Elite');
+                    // Need to handle the case where the header name in HTML might differ from the data key
+                    // Example: 'Tablet' header maps to 'Tablet Attach Rate' key
+                    let dataKey = header; // Assume header matches key initially
+                    if (header === 'Tablet') dataKey = 'Tablet Attach Rate';
+                    else if (header === 'PC') dataKey = 'PC Attach Rate';
+                    else if (header === 'NC') dataKey = 'NC Attach Rate';
+                    else if (header === 'TWS') dataKey = 'TWS Attach Rate';
+                    else if (header === 'WW') dataKey = 'WW Attach Rate';
+                    else if (header === 'ME') dataKey = 'ME Attach Rate';
+                    else if (header === 'NCME') dataKey = 'NCME Attach Rate';
+                    // Add other mappings if header text differs from data key
+
+                    let value = safeGet(row, dataKey, ''); // Get raw value using the potentially mapped key
+
+                    // Check if the *data key* indicates a percentage or rate
+                    const isPercentLike = dataKey.includes('%') || dataKey.includes('Rate') || dataKey.includes('Ach') || dataKey.includes('Connectivity') || dataKey.includes('Elite');
 
                     if (isPercentLike) {
                         // Parse as percent, export as decimal number, handle non-numeric gracefully
@@ -1177,7 +1202,8 @@ document.addEventListener('DOMContentLoaded', () => {
          const sortedFilteredData = [...filteredData].sort((a, b) => {
              let valA = safeGet(a, currentSort.column, null); let valB = safeGet(b, currentSort.column, null);
              if (valA === null && valB === null) return 0; if (valA === null) return currentSort.ascending ? -1 : 1; if (valB === null) return currentSort.ascending ? 1 : -1;
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%') || currentSort.column.includes('Target');
+             // Adjusted column check
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%');
              const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA); const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
              if (!isNaN(numA) && !isNaN(numB)) { return currentSort.ascending ? numA - numB : numB - numA; }
              else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA); }
@@ -1187,7 +1213,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (topStores.length > 0) {
             body += `Top ${topStores.length} Stores (Sorted by ${currentSort.column} ${currentSort.ascending ? 'ASC' : 'DESC'}):\n`;
             topStores.forEach((store, index) => {
-                 body += `${index + 1}. ${safeGet(store, 'Store', 'N/A')} (% Qtr Rev: ${formatPercent(parsePercent(safeGet(store, '% Quarterly Revenue Target', 0)))}, NCME: ${formatPercent(parsePercent(safeGet(store, 'NCME Attach Rate', 0)))}) \n`;
+                 // Removed % Qtr Rev Target from the email body for top stores
+                 body += `${index + 1}. ${safeGet(store, 'Store', 'N/A')} (NCME: ${formatPercent(parsePercent(safeGet(store, 'NCME Attach Rate', 0)))}) \n`;
             });
              body += "\n";
         }
