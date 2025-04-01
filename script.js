@@ -1,10 +1,10 @@
-/* Generated: 2025-03-31 11:33:58 PM EDT - Updated calculation logic for Rev AR%, Avg. Retail Mode Connectivity, Rep Skill Ach, and (V)PMR Ach in the summary section as per user requirements (including ignoring zeros for averages). */
+/* Generated: 2025-03-31 11:56:44 PM EDT - Add "Top 5 / Bottom 5" tables section, conditionally displayed for single-territory filters. */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
         'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
         'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
-        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', //'Rev AR%', // Rev AR% is now calculated from sums
+        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', //'Rev AR%', // Rev AR% is calculated
         'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
         'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
         'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
     const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6'];
     const TOP_N_CHART = 15; // Max items to show on the bar chart
+    const TOP_N_TABLES = 5; // Items for Top/Bottom 5 tables
 
     // --- DOM Elements ---
     const excelFileInput = document.getElementById('excelFile');
@@ -111,6 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachRateTable = document.getElementById('attachRateTable');
     const exportCsvButton = document.getElementById('exportCsvButton');
 
+    // ** NEW ** Top/Bottom 5 Elements
+    const topBottomSection = document.getElementById('topBottomSection');
+    const top5TableBody = document.getElementById('top5TableBody');
+    const bottom5TableBody = document.getElementById('bottom5TableBody');
+
     // Chart Elements
     const mainChartCanvas = document.getElementById('mainChartCanvas').getContext('2d');
     // const secondaryChartCanvas = document.getElementById('secondaryChartCanvas').getContext('2d'); // Placeholder
@@ -132,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // let secondaryChartInstance = null; // Placeholder
     let storeOptions = []; // Holds the *currently available* store options {value, text} based on other filters
     let allPossibleStores = []; // Holds *all* store options {value, text} from the initial file load
-    let currentSort = { column: 'Store', ascending: true };
-    let selectedStoreRow = null;
+    let currentSort = { column: 'Store', ascending: true }; // For Attach Rate Table
+    let selectedStoreRow = null; // Tracks the currently highlighted row across *all* tables
 
     // --- Helper Functions ---
     const formatCurrency = (value) => isNaN(value) ? 'N/A' : CURRENCY_FORMAT.format(value);
@@ -175,6 +181,34 @@ document.addEventListener('DOMContentLoaded', () => {
          if (!isValidForAverage(value)) return false; // Use previous check first
          const num = parseNumber(String(value).replace('%','')); // Parse again to ensure we have the number
          return num !== 0; // Return true only if it's not zero
+    };
+    // Function to calculate QTD Gap for sorting/display
+    const calculateQtdGap = (row) => {
+         const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0));
+         const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
+         // If either is NaN, the gap is conceptually undefined for sorting, treat as worst case (negative infinity)
+         if (isNaN(revenue) || isNaN(target)) {
+             return -Infinity;
+         }
+         return revenue - target;
+    };
+    // Function to calculate Rev AR% for display in Top/Bottom tables
+    const calculateRevARPercent = (row) => {
+        const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0));
+        const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
+        if (isNaN(revenue) || isNaN(target) || target === 0) {
+            return NaN; // Undefined if revenue/target is missing or target is zero
+        }
+        return revenue / target;
+    };
+    // Function to calculate Unit Achievement % for display in Top/Bottom tables
+    const calculateUnitAchievementPercent = (row) => {
+        const units = parseNumber(safeGet(row, 'Unit w/ DF', 0));
+        const target = parseNumber(safeGet(row, 'Unit Target', 0));
+        if (isNaN(units) || isNaN(target) || target === 0) {
+            return NaN; // Undefined if units/target is missing or target is zero
+        }
+        return units / target;
     };
 
     const getUniqueValues = (data, column) => {
@@ -482,16 +516,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 3. Update UI elements
                 updateSummary(filteredData);
+                updateTopBottomTables(filteredData); // ** NEW ** Update Top/Bottom tables
                 updateCharts(filteredData);
-                updateAttachRateTable(filteredData); // This already calls hideStoreDetails initially
+                updateAttachRateTable(filteredData);
 
-                // 4. Auto Show/Hide Store Details based on Filter Count
+                // 4. Auto Show/Hide Store Details based on Filter Count (Keep this logic)
                 if (filteredData.length === 1) {
                     showStoreDetails(filteredData[0]);
-                    highlightTableRow(safeGet(filteredData[0], 'Store', null));
+                    highlightTableRow(safeGet(filteredData[0], 'Store', null)); // Ensure single row is highlighted
                 } else {
-                    // Ensures details are hidden if filters change to >1 or 0 stores
-                    hideStoreDetails();
+                    hideStoreDetails(); // Hides details if >1 or 0 stores
                 }
 
                 // 5. Finalize UI state
@@ -506,9 +540,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultsArea.style.display = 'none';
                  exportCsvButton.disabled = true;
                  updateSummary([]);
+                 updateTopBottomTables([]); // ** NEW ** Clear Top/Bottom tables on error
                  updateCharts([]);
                  updateAttachRateTable([]);
-                 hideStoreDetails(); // Ensure details are hidden on error too
+                 hideStoreDetails();
 
             } finally {
                  showLoading(false, true);
@@ -560,6 +595,9 @@ document.addEventListener('DOMContentLoaded', () => {
          if (attachRateTableBody) attachRateTableBody.innerHTML = '';
          if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
          if (attachTableStatus) attachTableStatus.textContent = '';
+         if (topBottomSection) topBottomSection.style.display = 'none'; // ** NEW ** Hide Top/Bottom section
+         if (top5TableBody) top5TableBody.innerHTML = ''; // ** NEW ** Clear Top 5 table
+         if (bottom5TableBody) bottom5TableBody.innerHTML = ''; // ** NEW ** Clear Bottom 5 table
          hideStoreDetails();
          // Reset summary fields
          updateSummary([]);
@@ -729,6 +767,90 @@ document.addEventListener('DOMContentLoaded', () => {
          }
     };
 
+     // ** NEW ** Function to update Top 5 / Bottom 5 tables
+     const updateTopBottomTables = (data) => {
+        if (!topBottomSection || !top5TableBody || !bottom5TableBody) return; // Ensure elements exist
+
+        // Clear previous content
+        top5TableBody.innerHTML = '';
+        bottom5TableBody.innerHTML = '';
+
+        // Determine if data belongs to a single territory
+        const territoriesInData = new Set(data.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
+        const isSingleTerritory = territoriesInData.size === 1;
+
+        if (!isSingleTerritory || data.length === 0) {
+            topBottomSection.style.display = 'none'; // Hide the section
+            return;
+        }
+
+        topBottomSection.style.display = 'flex'; // Show the section (use flex for side-by-side)
+
+        // --- Top 5 Table (Revenue) ---
+        const top5Data = [...data]
+            .sort((a, b) => {
+                // Sort descending by Revenue w/DF. Handle NaN by placing them lower.
+                const revA = parseNumber(safeGet(a, 'Revenue w/DF', -Infinity));
+                const revB = parseNumber(safeGet(b, 'Revenue w/DF', -Infinity));
+                return revB - revA;
+            })
+            .slice(0, TOP_N_TABLES);
+
+        top5Data.forEach(row => {
+            const tr = top5TableBody.insertRow();
+            const storeName = safeGet(row, 'Store', null);
+            tr.dataset.storeName = storeName; // For highlighting and details
+            tr.onclick = () => {
+                showStoreDetails(row);
+                highlightTableRow(storeName);
+            };
+
+            const revenue = parseNumber(safeGet(row, 'Revenue w/DF', NaN));
+            const revAR = calculateRevARPercent(row); // Use helper
+            const unitAch = calculateUnitAchievementPercent(row); // Use helper
+            const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+            tr.insertCell().textContent = storeName;
+            tr.insertCell().textContent = formatCurrency(revenue);
+            tr.insertCell().textContent = formatPercent(revAR);
+            tr.insertCell().textContent = formatPercent(unitAch);
+            tr.insertCell().textContent = formatNumber(visits);
+        });
+
+        // --- Bottom 5 Table (QTD Gap - Opportunities) ---
+        const bottom5Data = [...data]
+            .sort((a, b) => {
+                // Sort descending by QTD Gap (Revenue - Target). Biggest Gap first.
+                // Handle undefined gaps (due to NaN revenue/target) by placing them lower.
+                const gapA = calculateQtdGap(a);
+                const gapB = calculateQtdGap(b);
+                return gapB - gapA; // Higher gap (worse performance) comes first
+            })
+            .slice(0, TOP_N_TABLES);
+
+         bottom5Data.forEach(row => {
+             const tr = bottom5TableBody.insertRow();
+             const storeName = safeGet(row, 'Store', null);
+             tr.dataset.storeName = storeName;
+             tr.onclick = () => {
+                 showStoreDetails(row);
+                 highlightTableRow(storeName);
+             };
+
+             const qtdGap = calculateQtdGap(row); // Use helper
+             const revAR = calculateRevARPercent(row); // Use helper
+             const unitAch = calculateUnitAchievementPercent(row); // Use helper
+             const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+             tr.insertCell().textContent = storeName;
+             tr.insertCell().textContent = formatCurrency(qtdGap === -Infinity ? NaN : qtdGap); // Format gap, handle -Infinity case
+             tr.insertCell().textContent = formatPercent(revAR);
+             tr.insertCell().textContent = formatPercent(unitAch);
+             tr.insertCell().textContent = formatNumber(visits);
+         });
+     };
+
+
     const updateCharts = (data) => {
         if (mainChartInstance) {
             mainChartInstance.destroy();
@@ -844,14 +966,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!attachRateTableBody || !attachRateTableFooter) return; // Exit if elements don't exist
         attachRateTableBody.innerHTML = '';
         attachRateTableFooter.innerHTML = '';
-        // Don't automatically hide details here, applyFilters handles that based on count
 
         if (data.length === 0) {
             if(attachTableStatus) attachTableStatus.textContent = 'No data to display based on filters.';
             return;
         }
 
-        // Sort data based on currentSort state
+        // Sort data based on currentSort state for this table
         const sortedData = [...data].sort((a, b) => {
              let valA = safeGet(a, currentSort.column, null); // Use null default for comparison consistency
              let valB = safeGet(b, currentSort.column, null);
@@ -861,9 +982,8 @@ document.addEventListener('DOMContentLoaded', () => {
              if (valA === null) return currentSort.ascending ? -1 : 1; // Nulls first when ascending
              if (valB === null) return currentSort.ascending ? 1 : -1; // Nulls first when ascending
 
-             // Attempt numeric conversion for sorting if applicable (percentages or numbers)
-             // Adjusted column check as % Quarterly Revenue Target is removed from the table
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%');
+             // Attempt numeric conversion for sorting if applicable
+             const isPercentCol = currentSort.column.includes('Attach Rate'); // Only attach rates here
              const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA);
              const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
 
@@ -871,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  // Numeric comparison
                  return currentSort.ascending ? numA - numB : numB - numA;
              } else {
-                 // String comparison (case-insensitive)
+                 // String comparison (case-insensitive) for Store column primarily
                  valA = String(valA).toLowerCase();
                  valB = String(valB).toLowerCase();
                  return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -928,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      const rawValue = safeGet(row, col.key, null); // Get raw value safely
                      // Determine if parsing as percent is needed
                      // Adjusted isPercentCol check slightly as % Target is gone
-                     const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('%');
+                     const isPercentCol = col.key.includes('Attach Rate'); // Only attach rates
                      // Use parsePercent for percent-like columns, parseNumber otherwise, to get numeric value for comparison
                      const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue);
 
@@ -999,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
              currentSort.column = sortKey;
              currentSort.ascending = true; // Default to ascending for new column
          }
-         // IMPORTANT: Update the table using the currently *globally filtered* data
+         // IMPORTANT: Update the attach rate table using the currently *globally filtered* data
          updateAttachRateTable(filteredData);
     };
 
@@ -1081,8 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         storeDetailsContent.innerHTML = detailsHtml;
         storeDetailsSection.style.display = 'block';
         closeStoreDetailsButton.style.display = 'inline-block';
-        // Optional: scroll into view only if triggered by click, not auto-filter?
-        // storeDetailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        storeDetailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); // Scroll to details when shown
     };
 
     const hideStoreDetails = () => {
@@ -1093,25 +1212,31 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightTableRow(null); // Remove table row highlight
     };
 
+     // ** UPDATED ** to handle highlighting across multiple tables
      const highlightTableRow = (storeName) => {
+         // Remove highlight from any previously selected row across all tables
          if (selectedStoreRow) {
              selectedStoreRow.classList.remove('selected-row');
+             selectedStoreRow = null; // Reset tracker
          }
-        if (storeName && attachRateTableBody) {
-             try {
-                 // Use querySelector which handles special characters in attribute values better
-                 selectedStoreRow = attachRateTableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
-                 if (selectedStoreRow) {
-                     selectedStoreRow.classList.add('selected-row');
-                 } else {
-                     selectedStoreRow = null; // Store not found in current table view
+         // If a storeName is provided, find and highlight the corresponding row in *any* table
+         if (storeName) {
+             const tables = [attachRateTableBody, top5TableBody, bottom5TableBody];
+             for (const tableBody of tables) {
+                 if (tableBody) {
+                     try {
+                         // Use querySelector for safety with special characters
+                         const rowToHighlight = tableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
+                         if (rowToHighlight) {
+                             rowToHighlight.classList.add('selected-row');
+                             selectedStoreRow = rowToHighlight; // Track the newly selected row
+                             break; // Stop searching once found
+                         }
+                     } catch (e) {
+                         console.error("Error selecting table row:", e);
+                     }
                  }
-             } catch (e) {
-                 console.error("Error selecting table row:", e);
-                 selectedStoreRow = null;
              }
-         } else {
-             selectedStoreRow = null;
          }
     };
 
@@ -1210,26 +1335,38 @@ document.addEventListener('DOMContentLoaded', () => {
         body += "*Averages calculated only using stores with valid, non-zero data for each metric where applicable (Connectivity, Rep Skill, PMR).\n\n"; // Updated note
 
 
-        // Use current sort order from the table for top stores
-         const sortedFilteredData = [...filteredData].sort((a, b) => {
-             let valA = safeGet(a, currentSort.column, null); let valB = safeGet(b, currentSort.column, null);
-             if (valA === null && valB === null) return 0; if (valA === null) return currentSort.ascending ? -1 : 1; if (valB === null) return currentSort.ascending ? 1 : -1;
-             // Adjusted column check
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%');
-             const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA); const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
-             if (!isNaN(numA) && !isNaN(numB)) { return currentSort.ascending ? numA - numB : numB - numA; }
-             else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA); }
-         });
+        // Add Top/Bottom 5 if applicable
+        const territoriesInData = new Set(filteredData.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
+        if (territoriesInData.size === 1) {
+             const territoryName = territoriesInData.values().next().value; // Get the single territory name
+             body += `--- Territory: ${territoryName} ---\n`;
 
-        const topStores = sortedFilteredData.slice(0, 5);
-        if (topStores.length > 0) {
-            body += `Top ${topStores.length} Stores (Sorted by ${currentSort.column} ${currentSort.ascending ? 'ASC' : 'DESC'}):\n`;
-            topStores.forEach((store, index) => {
-                 // Removed % Qtr Rev Target from the email body for top stores
-                 body += `${index + 1}. ${safeGet(store, 'Store', 'N/A')} (NCME: ${formatPercent(parsePercent(safeGet(store, 'NCME Attach Rate', 0)))}) \n`;
-            });
-             body += "\n";
+             // Top 5
+             const top5Data = [...filteredData]
+                 .sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', -Infinity)) - parseNumber(safeGet(a, 'Revenue w/DF', -Infinity)))
+                 .slice(0, TOP_N_TABLES);
+             if (top5Data.length > 0) {
+                 body += "Top 5 (Revenue):\n";
+                 top5Data.forEach((row, i) => {
+                     body += `${i+1}. ${safeGet(row, 'Store')} - Rev: ${formatCurrency(parseNumber(safeGet(row, 'Revenue w/DF')))}\n`;
+                 });
+                 body += "\n";
+             }
+
+             // Bottom 5
+             const bottom5Data = [...filteredData]
+                  .sort((a, b) => calculateQtdGap(b) - calculateQtdGap(a)) // Sort descending by gap
+                 .slice(0, TOP_N_TABLES);
+              if (bottom5Data.length > 0) {
+                 body += "Bottom 5 (Opportunities by QTD Gap):\n";
+                 bottom5Data.forEach((row, i) => {
+                     body += `${i+1}. ${safeGet(row, 'Store')} - Gap: ${formatCurrency(calculateQtdGap(row))}\n`;
+                 });
+                 body += "\n";
+             }
         }
+
+
         body += "---------------------------------\n";
         body += "Generated by FSM Dashboard\n";
         return body;
@@ -1279,11 +1416,19 @@ document.addEventListener('DOMContentLoaded', () => {
      const selectAllOptions = (selectElement) => {
          if (!selectElement) return;
          Array.from(selectElement.options).forEach(option => option.selected = true);
+         // Trigger hierarchy update after selection change
+         if (selectElement === territoryFilter) {
+            updateStoreFilterOptionsBasedOnHierarchy();
+         }
     };
 
      const deselectAllOptions = (selectElement) => {
          if (!selectElement) return;
          selectElement.selectedIndex = -1; // Deselects all
+          // Trigger hierarchy update after selection change
+         if (selectElement === territoryFilter) {
+             updateStoreFilterOptionsBasedOnHierarchy();
+         }
     };
 
 
@@ -1295,13 +1440,13 @@ document.addEventListener('DOMContentLoaded', () => {
     shareEmailButton?.addEventListener('click', handleShareEmail);
     closeStoreDetailsButton?.addEventListener('click', hideStoreDetails);
 
-    // Multi-select buttons (Ensure they call hierarchy update if needed)
-    territorySelectAll?.addEventListener('click', () => { selectAllOptions(territoryFilter); updateStoreFilterOptionsBasedOnHierarchy(); });
-    territoryDeselectAll?.addEventListener('click', () => { deselectAllOptions(territoryFilter); updateStoreFilterOptionsBasedOnHierarchy(); });
+    // Multi-select buttons
+    territorySelectAll?.addEventListener('click', () => selectAllOptions(territoryFilter));
+    territoryDeselectAll?.addEventListener('click', () => deselectAllOptions(territoryFilter));
     storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilter)); // No hierarchy update needed here
     storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilter)); // No hierarchy update needed here
 
-    // Table Sorting (Check if thead exists)
+    // Table Sorting (Attach Rate Table Only)
     attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
 
     // --- Initial Setup ---
