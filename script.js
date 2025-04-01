@@ -1,4 +1,4 @@
-/* Generated: 2025-03-31 11:56:44 PM EDT - Add "Top 5 / Bottom 5" tables section, conditionally displayed for single-territory filters. */
+/* Generated: 2025-04-01 12:22:50 AM EDT - Update Bottom 5 table sort logic to show lowest QTD Gap (ascending order). */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
@@ -186,9 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateQtdGap = (row) => {
          const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0));
          const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
-         // If either is NaN, the gap is conceptually undefined for sorting, treat as worst case (negative infinity)
+         // If either is NaN, the gap is conceptually undefined for sorting, treat as worst case (negative infinity for asc, positive infinity for desc)
          if (isNaN(revenue) || isNaN(target)) {
-             return -Infinity;
+             return Infinity; // Treat undefined gaps as highest possible for *ascending* sort (lowest gap first)
          }
          return revenue - target;
     };
@@ -768,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      // ** NEW ** Function to update Top 5 / Bottom 5 tables
+     // ** UPDATED ** Bottom 5 sort logic
      const updateTopBottomTables = (data) => {
         if (!topBottomSection || !top5TableBody || !bottom5TableBody) return; // Ensure elements exist
 
@@ -820,11 +821,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Bottom 5 Table (QTD Gap - Opportunities) ---
         const bottom5Data = [...data]
             .sort((a, b) => {
-                // Sort descending by QTD Gap (Revenue - Target). Biggest Gap first.
-                // Handle undefined gaps (due to NaN revenue/target) by placing them lower.
+                // ** CORRECTED SORT ** Sort ascending by QTD Gap (Revenue - Target). Lowest Gap first.
+                // Handle undefined gaps (due to NaN revenue/target) by placing them highest (Infinity).
                 const gapA = calculateQtdGap(a);
                 const gapB = calculateQtdGap(b);
-                return gapB - gapA; // Higher gap (worse performance) comes first
+                return gapA - gapB; // Lower gap (better performance relative to target) comes first
             })
             .slice(0, TOP_N_TABLES);
 
@@ -843,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
              const visits = parseNumber(safeGet(row, 'Visit count', NaN));
 
              tr.insertCell().textContent = storeName;
-             tr.insertCell().textContent = formatCurrency(qtdGap === -Infinity ? NaN : qtdGap); // Format gap, handle -Infinity case
+             tr.insertCell().textContent = formatCurrency(qtdGap === Infinity ? NaN : qtdGap); // Format gap, handle Infinity case used for sorting undefined
              tr.insertCell().textContent = formatPercent(revAR);
              tr.insertCell().textContent = formatPercent(unitAch);
              tr.insertCell().textContent = formatNumber(visits);
@@ -1353,9 +1354,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  body += "\n";
              }
 
-             // Bottom 5
+             // Bottom 5 (** CORRECTED SORT **)
              const bottom5Data = [...filteredData]
-                  .sort((a, b) => calculateQtdGap(b) - calculateQtdGap(a)) // Sort descending by gap
+                  .sort((a, b) => calculateQtdGap(a) - calculateQtdGap(b)) // Sort ascending by gap
                  .slice(0, TOP_N_TABLES);
               if (bottom5Data.length > 0) {
                  body += "Bottom 5 (Opportunities by QTD Gap):\n";
