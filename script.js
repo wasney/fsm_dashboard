@@ -1,10 +1,10 @@
-/* Generated: 2025-03-31 10:34:53 PM EDT - Removed "% QTR REV TARGET" column from Attach Rates table and related calculations/references. */
+/* Generated: 2025-03-31 11:33:58 PM EDT - Updated calculation logic for Rev AR%, Avg. Retail Mode Connectivity, Rep Skill Ach, and (V)PMR Ach in the summary section as per user requirements (including ignoring zeros for averages). */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
         'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
         'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
-        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%', // Keep '% Quarterly Revenue Target' for summary & potentially chart tooltip
+        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', //'Rev AR%', // Rev AR% is now calculated from sums
         'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
         'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
         'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qtdGapValue = document.getElementById('qtdGapValue');
     const quarterlyRevenueTargetValue = document.getElementById('quarterlyRevenueTargetValue');
     const percentQuarterlyStoreTargetValue = document.getElementById('percentQuarterlyStoreTargetValue');
-    const revARValue = document.getElementById('revARValue');
+    const revARValue = document.getElementById('revARValue'); // This now represents calculated Rev % QTD Target
     const unitsWithDFValue = document.getElementById('unitsWithDFValue');
     const unitTargetValue = document.getElementById('unitTargetValue');
     const unitAchievementValue = document.getElementById('unitAchievementValue');
@@ -170,6 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
          // Check if it parses to a number (handles both numbers and numeric strings)
          return !isNaN(parseNumber(String(value).replace('%',''))); // Check parseNumber after removing % just in case
     };
+    // Helper to check if a value is valid for averaging AND non-zero
+    const isValidAndNonZeroForAverage = (value) => {
+         if (!isValidForAverage(value)) return false; // Use previous check first
+         const num = parseNumber(String(value).replace('%','')); // Parse again to ensure we have the number
+         return num !== 0; // Return true only if it's not zero
+    };
+
     const getUniqueValues = (data, column) => {
         // Use safeGet with '' as default to handle potential missing values gracefully
         const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => val !== ''));
@@ -559,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
          if(statusDiv) statusDiv.textContent = 'No file selected.'; // Reset status message
      };
 
-    // --- UPDATED updateSummary to exclude blanks from averages ---
+    // --- UPDATED updateSummary with new calculation logic ---
     const updateSummary = (data) => {
         const totalCount = data.length; // Total rows matching filters
 
@@ -576,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // Nothing more to do if no data
         }
 
-        // --- Calculate SUMS (These generally include all filtered rows) ---
+        // --- Calculate SUMS (Used for several calculations) ---
         const sumRevenue = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Revenue w/DF', 0)), 0);
         const sumQtdTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'QTD Revenue Target', 0)), 0);
         const sumQuarterlyTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Quarterly Revenue Target', 0)), 0);
@@ -585,37 +592,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const sumVisits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Visit count', 0)), 0);
         const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
 
-        // --- Calculate AVERAGES (excluding blanks/invalid values) ---
-        let sumRevAR = 0, countRevAR = 0;
+        // --- Calculate AVERAGES (excluding blanks/invalid values AND ZEROS where specified) ---
+        // Use the new isValidAndNonZeroForAverage helper for metrics where 0 should be ignored
         let sumConnectivity = 0, countConnectivity = 0;
         let sumRepSkill = 0, countRepSkill = 0;
         let sumPmr = 0, countPmr = 0;
+        // Use original isValidForAverage for metrics where 0 is a valid value to include
         let sumPostTraining = 0, countPostTraining = 0;
         let sumElite = 0, countElite = 0;
 
+
         data.forEach(row => {
             let val;
-            // Rev AR%
-            val = safeGet(row, 'Rev AR%', null);
-            if (isValidForAverage(val)) { sumRevAR += parsePercent(val); countRevAR++; }
-            // Retail Mode Connectivity
+            // Retail Mode Connectivity (Ignore Blanks & Zeros)
             val = safeGet(row, 'Retail Mode Connectivity', null);
-            if (isValidForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
-            // Rep Skill Ach
+            if (isValidAndNonZeroForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
+            // Rep Skill Ach (Ignore Blanks & Zeros)
             val = safeGet(row, 'Rep Skill Ach', null);
-            if (isValidForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
-            // (V)PMR Ach
+            if (isValidAndNonZeroForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
+            // (V)PMR Ach (Ignore Blanks & Zeros)
             val = safeGet(row, '(V)PMR Ach', null);
-            if (isValidForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
-            // Post Training Score
+            if (isValidAndNonZeroForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
+            // Post Training Score (Ignore Blanks, Include Zeros)
             val = safeGet(row, 'Post Training Score', null);
-            if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; } // Use parseNumber
-            // Elite
+            if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; }
+            // Elite (Ignore Blanks, Include Zeros - assuming 0% is valid)
             val = safeGet(row, 'Elite', null);
             if (isValidForAverage(val)) { sumElite += parsePercent(val); countElite++; }
         });
 
-        const avgRevAR = countRevAR === 0 ? NaN : sumRevAR / countRevAR;
         const avgConnectivity = countConnectivity === 0 ? NaN : sumConnectivity / countConnectivity;
         const avgRepSkill = countRepSkill === 0 ? NaN : sumRepSkill / countRepSkill;
         const avgPmr = countPmr === 0 ? NaN : sumPmr / countPmr;
@@ -623,8 +628,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const avgElite = countElite === 0 ? NaN : sumElite / countElite;
 
         // --- Calculate Overall Percentages (based on SUMS) ---
-        const overallPercentStoreTarget = sumQuarterlyTarget === 0 ? 0 : sumRevenue / sumQuarterlyTarget;
+        // ** NEW CALCULATION **: Rev AR% = Sum Revenue / Sum QTD Target
+        const calculatedRevAR = sumQtdTarget === 0 ? 0 : sumRevenue / sumQtdTarget;
+        // ** VERIFIED **: Unit Achievement % = Sum Units / Sum Unit Target
         const overallUnitAchievement = sumUnitTarget === 0 ? 0 : sumUnits / sumUnitTarget;
+        // % Store Quarterly Target = Sum Revenue / Sum Quarterly Target
+        const overallPercentStoreTarget = sumQuarterlyTarget === 0 ? 0 : sumRevenue / sumQuarterlyTarget;
+
 
         // --- Update DOM Elements (safely using optional chaining) ---
         // Sums
@@ -646,24 +656,25 @@ document.addEventListener('DOMContentLoaded', () => {
         trainingCountValue && (trainingCountValue.title = `Sum of 'Trainings' for ${totalCount} filtered stores`);
 
         // Overall % based on Sums
+        revARValue && (revARValue.textContent = formatPercent(calculatedRevAR)); // NEW CALCULATION DISPLAYED
+        revARValue && (revARValue.title = `Calculated Rev AR% (Total Revenue / Total QTD Target)`); // NEW TITLE
+        unitAchievementValue && (unitAchievementValue.textContent = formatPercent(overallUnitAchievement)); // Correct Calculation
+        unitAchievementValue && (unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`); // Correct Title
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.textContent = formatPercent(overallPercentStoreTarget));
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.title = `Overall % Quarterly Target (Total Revenue / Total Quarterly Target)`);
-        unitAchievementValue && (unitAchievementValue.textContent = formatPercent(overallUnitAchievement));
-        unitAchievementValue && (unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`);
 
-        // Averages (showing count of valid entries in title)
-        revARValue && (revARValue.textContent = formatPercent(avgRevAR));
-        revARValue && (revARValue.title = `Average 'Rev AR%' across ${countRevAR} stores with data`);
+
+        // Averages (showing count of valid entries in title, updated for new zero-exclusion logic)
         retailModeConnectivityValue && (retailModeConnectivityValue.textContent = formatPercent(avgConnectivity));
-        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with data`);
+        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with non-zero data`); // Updated Title
         repSkillAchValue && (repSkillAchValue.textContent = formatPercent(avgRepSkill));
-        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with data`);
+        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with non-zero data`); // Updated Title
         vPmrAchValue && (vPmrAchValue.textContent = formatPercent(avgPmr));
-        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with data`);
+        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with non-zero data`); // Updated Title
         postTrainingScoreValue && (postTrainingScoreValue.textContent = formatNumber(avgPostTraining.toFixed(1))); // Keep formatting
-        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`);
+        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`); // Title assumes 0 is valid
         eliteValue && (eliteValue.textContent = formatPercent(avgElite));
-        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`);
+        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`); // Title assumes 0 is valid
 
         // Contextual Hierarchy Percentages (Recalculate averages excluding blanks here too)
         updateContextualSummary(data);
@@ -686,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let count = 0;
             data.forEach(row => {
                 const val = safeGet(row, column, null);
-                if (isValidForAverage(val)) {
+                if (isValidForAverage(val)) { // Keep original check here unless zeros need excluding too
                     sum += parsePercent(val); // Assuming these are percentages
                     count++;
                 }
@@ -828,6 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- UPDATED updateAttachRateTable to exclude blanks from footer average ---
+    // --- Removed % Quarterly Revenue Target Column ---
     const updateAttachRateTable = (data) => {
         if (!attachRateTableBody || !attachRateTableFooter) return; // Exit if elements don't exist
         attachRateTableBody.innerHTML = '';
@@ -879,8 +891,8 @@ document.addEventListener('DOMContentLoaded', () => {
              let count = 0;
              data.forEach(row => {
                  const val = safeGet(row, key, null);
-                 if (isValidForAverage(val)) {
-                     sum += parsePercent(val); // Assuming all these are percentages
+                 if (isValidForAverage(val)) { // Keep original check for attach rates (0% is valid)
+                     sum += parsePercent(val);
                      count++;
                  }
              });
@@ -1185,17 +1197,17 @@ document.addEventListener('DOMContentLoaded', () => {
         body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
         body += `- QTD Gap: ${qtdGapValue?.textContent || 'N/A'}\n`;
         body += `- % Store Quarterly Target: ${percentQuarterlyStoreTargetValue?.textContent || 'N/A'}\n`;
-        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'}\n`;
+        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'}\n`; // Uses updated calculation
         body += `- Total Units (incl. DF): ${unitsWithDFValue?.textContent || 'N/A'}\n`;
         body += `- Unit Achievement %: ${unitAchievementValue?.textContent || 'N/A'}\n`;
         body += `- Total Visits: ${visitCountValue?.textContent || 'N/A'}\n`;
-        body += `- Avg. Connectivity: ${retailModeConnectivityValue?.textContent || 'N/A'}\n\n`;
+        body += `- Avg. Connectivity: ${retailModeConnectivityValue?.textContent || 'N/A'}\n\n`; // Uses updated calculation
         body += "Mysteryshop & Training (Avg*):\n"; // Added asterisk note
-        body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`;
-        body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`;
+        body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`; // Uses updated calculation
+        body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`; // Uses updated calculation
         body += `- Post Training Score: ${postTrainingScoreValue?.textContent || 'N/A'}\n`;
         body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'}\n\n`;
-        body += "*Averages calculated only using stores with valid data for each metric.\n\n";
+        body += "*Averages calculated only using stores with valid, non-zero data for each metric where applicable (Connectivity, Rep Skill, PMR).\n\n"; // Updated note
 
 
         // Use current sort order from the table for top stores
