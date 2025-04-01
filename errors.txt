@@ -1,3 +1,0 @@
-Uncaught ReferenceError: barGoodBg is not defined
-    at getChartOptions (script.js:277:13)
-    at HTMLDocument.<anonymous> (script.js:24:30)
