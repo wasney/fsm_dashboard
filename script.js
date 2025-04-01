@@ -1,4 +1,4 @@
-/* Generated: 2025-04-01 12:35:53 AM EDT - Filter Attach Rate table to hide rows where all attach rate values are 0%. */
+/* Generated: 2025-04-01 12:22:50 AM EDT - Update Bottom 5 table sort logic to show lowest QTD Gap (ascending order). */
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
     const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
@@ -19,10 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
         '%Quarterly Territory Rev Target', 'Region Rev%', 'District Rev%', 'Territory Rev%'
     ];
     const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE']; // Used for Flag summary in details
-    const ATTACH_RATE_KEYS = [ // Keys used for the attach rate table filtering and averages
-         'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
-         'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
-    ];
     const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
@@ -171,13 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
          return NaN; // Default to NaN
     };
     const safeGet = (obj, path, defaultValue = 'N/A') => {
-        // Special handling for 0: if defaultValue is explicitly null, return 0 as 0, not null.
-        // This helps differentiate between a missing value and an actual zero value.
-        if (defaultValue === null && obj && obj[path] === 0) {
-             return 0;
-        }
         const value = obj ? obj[path] : undefined;
-        // Return defaultValue only if value is undefined OR null (unless defaultValue is null and value is 0)
         return (value !== undefined && value !== null) ? value : defaultValue;
     };
     // Helper to check if a value is valid for averaging (not null, not empty, parses to number)
@@ -196,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateQtdGap = (row) => {
          const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0));
          const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
-         // If either is NaN, the gap is conceptually undefined for sorting, treat as worst case (positive infinity for asc sort)
+         // If either is NaN, the gap is conceptually undefined for sorting, treat as worst case (negative infinity for asc, positive infinity for desc)
          if (isNaN(revenue) || isNaN(target)) {
              return Infinity; // Treat undefined gaps as highest possible for *ascending* sort (lowest gap first)
          }
@@ -526,31 +516,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // 3. Update UI elements
                 updateSummary(filteredData);
-                updateTopBottomTables(filteredData); // Update Top/Bottom tables
+                updateTopBottomTables(filteredData); // ** NEW ** Update Top/Bottom tables
                 updateCharts(filteredData);
-                updateAttachRateTable(filteredData); // Update Attach Rate table
+                updateAttachRateTable(filteredData);
 
-                // 4. Auto Show/Hide Store Details based on Filter Count
+                // 4. Auto Show/Hide Store Details based on Filter Count (Keep this logic)
                 if (filteredData.length === 1) {
                     showStoreDetails(filteredData[0]);
-                    highlightTableRow(safeGet(filteredData[0], 'Store', null));
+                    highlightTableRow(safeGet(filteredData[0], 'Store', null)); // Ensure single row is highlighted
                 } else {
-                    hideStoreDetails();
+                    hideStoreDetails(); // Hides details if >1 or 0 stores
                 }
 
                 // 5. Finalize UI state
-                statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`;
+                statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`; // Update status text
                 resultsArea.style.display = 'block';
                 exportCsvButton.disabled = filteredData.length === 0;
 
             } catch (error) {
                 console.error("Error applying filters:", error);
-                statusDiv.textContent = "Error applying filters. Check console for details.";
+                statusDiv.textContent = "Error applying filters. Check console for details."; // Update status text
                 filteredData = [];
                 resultsArea.style.display = 'none';
                  exportCsvButton.disabled = true;
                  updateSummary([]);
-                 updateTopBottomTables([]);
+                 updateTopBottomTables([]); // ** NEW ** Clear Top/Bottom tables on error
                  updateCharts([]);
                  updateAttachRateTable([]);
                  hideStoreDetails();
@@ -566,13 +556,13 @@ document.addEventListener('DOMContentLoaded', () => {
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { if (sel) { sel.value = 'ALL'; sel.disabled = true;} });
          if (territoryFilter) { territoryFilter.selectedIndex = -1; territoryFilter.disabled = true; }
          if (storeFilter) {
-             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
+             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; // Clear options
              storeFilter.selectedIndex = -1;
              storeFilter.disabled = true;
          }
          if (storeSearch) { storeSearch.value = ''; storeSearch.disabled = true; }
-         storeOptions = [];
-         allPossibleStores = [];
+         storeOptions = []; // Clear dynamic store options
+         allPossibleStores = []; // Clear all possible stores too
 
 
          // Reset checkboxes
@@ -597,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      const resetUI = () => {
-         resetFilters();
+         resetFilters(); // Resets and disables filters
          if (filterArea) filterArea.style.display = 'none';
          if (resultsArea) resultsArea.style.display = 'none';
          // Clear potential leftover data displays
@@ -605,18 +595,18 @@ document.addEventListener('DOMContentLoaded', () => {
          if (attachRateTableBody) attachRateTableBody.innerHTML = '';
          if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
          if (attachTableStatus) attachTableStatus.textContent = '';
-         if (topBottomSection) topBottomSection.style.display = 'none';
-         if (top5TableBody) top5TableBody.innerHTML = '';
-         if (bottom5TableBody) bottom5TableBody.innerHTML = '';
+         if (topBottomSection) topBottomSection.style.display = 'none'; // ** NEW ** Hide Top/Bottom section
+         if (top5TableBody) top5TableBody.innerHTML = ''; // ** NEW ** Clear Top 5 table
+         if (bottom5TableBody) bottom5TableBody.innerHTML = ''; // ** NEW ** Clear Bottom 5 table
          hideStoreDetails();
          // Reset summary fields
          updateSummary([]);
-         if(statusDiv) statusDiv.textContent = 'No file selected.';
+         if(statusDiv) statusDiv.textContent = 'No file selected.'; // Reset status message
      };
 
     // --- UPDATED updateSummary with new calculation logic ---
     const updateSummary = (data) => {
-        const totalCount = data.length;
+        const totalCount = data.length; // Total rows matching filters
 
         // Clear summary fields first
         const fieldsToClear = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
@@ -628,10 +618,10 @@ document.addEventListener('DOMContentLoaded', () => {
         [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => { if(p) p.style.display = 'none';});
 
         if (totalCount === 0) {
-            return;
+            return; // Nothing more to do if no data
         }
 
-        // --- Calculate SUMS ---
+        // --- Calculate SUMS (Used for several calculations) ---
         const sumRevenue = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Revenue w/DF', 0)), 0);
         const sumQtdTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'QTD Revenue Target', 0)), 0);
         const sumQuarterlyTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Quarterly Revenue Target', 0)), 0);
@@ -641,21 +631,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
 
         // --- Calculate AVERAGES (excluding blanks/invalid values AND ZEROS where specified) ---
+        // Use the new isValidAndNonZeroForAverage helper for metrics where 0 should be ignored
         let sumConnectivity = 0, countConnectivity = 0;
         let sumRepSkill = 0, countRepSkill = 0;
         let sumPmr = 0, countPmr = 0;
+        // Use original isValidForAverage for metrics where 0 is a valid value to include
         let sumPostTraining = 0, countPostTraining = 0;
         let sumElite = 0, countElite = 0;
 
+
         data.forEach(row => {
             let val;
-            // Connectivity, Rep Skill, PMR (Ignore Blanks & Zeros)
-            val = safeGet(row, 'Retail Mode Connectivity', null); if (isValidAndNonZeroForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
-            val = safeGet(row, 'Rep Skill Ach', null); if (isValidAndNonZeroForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
-            val = safeGet(row, '(V)PMR Ach', null); if (isValidAndNonZeroForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
-            // Post Training, Elite (Ignore Blanks, Include Zeros)
-            val = safeGet(row, 'Post Training Score', null); if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; }
-            val = safeGet(row, 'Elite', null); if (isValidForAverage(val)) { sumElite += parsePercent(val); countElite++; }
+            // Retail Mode Connectivity (Ignore Blanks & Zeros)
+            val = safeGet(row, 'Retail Mode Connectivity', null);
+            if (isValidAndNonZeroForAverage(val)) { sumConnectivity += parsePercent(val); countConnectivity++; }
+            // Rep Skill Ach (Ignore Blanks & Zeros)
+            val = safeGet(row, 'Rep Skill Ach', null);
+            if (isValidAndNonZeroForAverage(val)) { sumRepSkill += parsePercent(val); countRepSkill++; }
+            // (V)PMR Ach (Ignore Blanks & Zeros)
+            val = safeGet(row, '(V)PMR Ach', null);
+            if (isValidAndNonZeroForAverage(val)) { sumPmr += parsePercent(val); countPmr++; }
+            // Post Training Score (Ignore Blanks, Include Zeros)
+            val = safeGet(row, 'Post Training Score', null);
+            if (isValidForAverage(val)) { sumPostTraining += parseNumber(val); countPostTraining++; }
+            // Elite (Ignore Blanks, Include Zeros - assuming 0% is valid)
+            val = safeGet(row, 'Elite', null);
+            if (isValidForAverage(val)) { sumElite += parsePercent(val); countElite++; }
         });
 
         const avgConnectivity = countConnectivity === 0 ? NaN : sumConnectivity / countConnectivity;
@@ -664,12 +665,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const avgPostTraining = countPostTraining === 0 ? NaN : sumPostTraining / countPostTraining;
         const avgElite = countElite === 0 ? NaN : sumElite / countElite;
 
-        // --- Calculate Overall Percentages ---
+        // --- Calculate Overall Percentages (based on SUMS) ---
+        // ** NEW CALCULATION **: Rev AR% = Sum Revenue / Sum QTD Target
         const calculatedRevAR = sumQtdTarget === 0 ? 0 : sumRevenue / sumQtdTarget;
+        // ** VERIFIED **: Unit Achievement % = Sum Units / Sum Unit Target
         const overallUnitAchievement = sumUnitTarget === 0 ? 0 : sumUnits / sumUnitTarget;
+        // % Store Quarterly Target = Sum Revenue / Sum Quarterly Target
         const overallPercentStoreTarget = sumQuarterlyTarget === 0 ? 0 : sumRevenue / sumQuarterlyTarget;
 
-        // --- Update DOM ---
+
+        // --- Update DOM Elements (safely using optional chaining) ---
         // Sums
         revenueWithDFValue && (revenueWithDFValue.textContent = formatCurrency(sumRevenue));
         revenueWithDFValue && (revenueWithDFValue.title = `Sum of 'Revenue w/DF' for ${totalCount} filtered stores`);
@@ -687,132 +692,349 @@ document.addEventListener('DOMContentLoaded', () => {
         visitCountValue && (visitCountValue.title = `Sum of 'Visit count' for ${totalCount} filtered stores`);
         trainingCountValue && (trainingCountValue.textContent = formatNumber(sumTrainings));
         trainingCountValue && (trainingCountValue.title = `Sum of 'Trainings' for ${totalCount} filtered stores`);
-        // Overall %
-        revARValue && (revARValue.textContent = formatPercent(calculatedRevAR));
-        revARValue && (revARValue.title = `Calculated Rev AR% (Total Revenue / Total QTD Target)`);
-        unitAchievementValue && (unitAchievementValue.textContent = formatPercent(overallUnitAchievement));
-        unitAchievementValue && (unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`);
+
+        // Overall % based on Sums
+        revARValue && (revARValue.textContent = formatPercent(calculatedRevAR)); // NEW CALCULATION DISPLAYED
+        revARValue && (revARValue.title = `Calculated Rev AR% (Total Revenue / Total QTD Target)`); // NEW TITLE
+        unitAchievementValue && (unitAchievementValue.textContent = formatPercent(overallUnitAchievement)); // Correct Calculation
+        unitAchievementValue && (unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`); // Correct Title
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.textContent = formatPercent(overallPercentStoreTarget));
         percentQuarterlyStoreTargetValue && (percentQuarterlyStoreTargetValue.title = `Overall % Quarterly Target (Total Revenue / Total Quarterly Target)`);
-        // Averages
-        retailModeConnectivityValue && (retailModeConnectivityValue.textContent = formatPercent(avgConnectivity));
-        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with non-zero data`);
-        repSkillAchValue && (repSkillAchValue.textContent = formatPercent(avgRepSkill));
-        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with non-zero data`);
-        vPmrAchValue && (vPmrAchValue.textContent = formatPercent(avgPmr));
-        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with non-zero data`);
-        postTrainingScoreValue && (postTrainingScoreValue.textContent = formatNumber(avgPostTraining.toFixed(1)));
-        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`);
-        eliteValue && (eliteValue.textContent = formatPercent(avgElite));
-        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`);
 
+
+        // Averages (showing count of valid entries in title, updated for new zero-exclusion logic)
+        retailModeConnectivityValue && (retailModeConnectivityValue.textContent = formatPercent(avgConnectivity));
+        retailModeConnectivityValue && (retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with non-zero data`); // Updated Title
+        repSkillAchValue && (repSkillAchValue.textContent = formatPercent(avgRepSkill));
+        repSkillAchValue && (repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with non-zero data`); // Updated Title
+        vPmrAchValue && (vPmrAchValue.textContent = formatPercent(avgPmr));
+        vPmrAchValue && (vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with non-zero data`); // Updated Title
+        postTrainingScoreValue && (postTrainingScoreValue.textContent = formatNumber(avgPostTraining.toFixed(1))); // Keep formatting
+        postTrainingScoreValue && (postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`); // Title assumes 0 is valid
+        eliteValue && (eliteValue.textContent = formatPercent(avgElite));
+        eliteValue && (eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`); // Title assumes 0 is valid
+
+        // Contextual Hierarchy Percentages (Recalculate averages excluding blanks here too)
         updateContextualSummary(data);
     };
 
+    // --- UPDATED updateContextualSummary to exclude blanks from averages ---
     const updateContextualSummary = (data) => {
+        // Hide all contextual fields initially safely
         [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
+
         if (data.length === 0) return;
+
         const singleRegion = regionFilter.value !== 'ALL';
         const singleDistrict = districtFilter.value !== 'ALL';
         const singleTerritory = territoryFilter.selectedOptions.length === 1;
-        const calculateAverageExcludeBlanks = (column) => { /* ... [implementation unchanged] ... */ }; // Assuming this is correct
+
+        // Helper function to calculate average excluding blanks for a specific column
+        const calculateAverageExcludeBlanks = (column) => {
+            let sum = 0;
+            let count = 0;
+            data.forEach(row => {
+                const val = safeGet(row, column, null);
+                if (isValidForAverage(val)) { // Keep original check here unless zeros need excluding too
+                    sum += parsePercent(val); // Assuming these are percentages
+                    count++;
+                }
+            });
+            return count === 0 ? NaN : sum / count;
+        };
+
+        // Calculate averages excluding blanks
         const avgPercentTerritoryTarget = calculateAverageExcludeBlanks('%Quarterly Territory Rev Target');
         const avgTerritoryRevPercent = calculateAverageExcludeBlanks('Territory Rev%');
         const avgDistrictRevPercent = calculateAverageExcludeBlanks('District Rev%');
         const avgRegionRevPercent = calculateAverageExcludeBlanks('Region Rev%');
+
+        // Update DOM
         if (percentQuarterlyTerritoryTargetValue) percentQuarterlyTerritoryTargetValue.textContent = formatPercent(avgPercentTerritoryTarget);
         if (percentQuarterlyTerritoryTargetP) percentQuarterlyTerritoryTargetP.style.display = 'block';
-        if (singleTerritory || singleDistrict || singleRegion) { if (territoryRevPercentValue) territoryRevPercentValue.textContent = formatPercent(avgTerritoryRevPercent); if (territoryRevPercentP) territoryRevPercentP.style.display = 'block'; }
-        if (singleDistrict || singleRegion) { if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent); if (districtRevPercentP) districtRevPercentP.style.display = 'block'; }
-        if (singleRegion) { if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent); if (regionRevPercentP) regionRevPercentP.style.display = 'block'; }
+
+        if (singleTerritory || singleDistrict || singleRegion) {
+             if (territoryRevPercentValue) territoryRevPercentValue.textContent = formatPercent(avgTerritoryRevPercent);
+             if (territoryRevPercentP) territoryRevPercentP.style.display = 'block';
+        }
+        if (singleDistrict || singleRegion) {
+             if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent);
+             if (districtRevPercentP) districtRevPercentP.style.display = 'block';
+         }
+         if (singleRegion) {
+             if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent);
+             if (regionRevPercentP) regionRevPercentP.style.display = 'block';
+         }
     };
 
-    const updateTopBottomTables = (data) => {
-        if (!topBottomSection || !top5TableBody || !bottom5TableBody) return;
+     // ** NEW ** Function to update Top 5 / Bottom 5 tables
+     // ** UPDATED ** Bottom 5 sort logic
+     const updateTopBottomTables = (data) => {
+        if (!topBottomSection || !top5TableBody || !bottom5TableBody) return; // Ensure elements exist
+
+        // Clear previous content
         top5TableBody.innerHTML = '';
         bottom5TableBody.innerHTML = '';
+
+        // Determine if data belongs to a single territory
         const territoriesInData = new Set(data.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
         const isSingleTerritory = territoriesInData.size === 1;
-        if (!isSingleTerritory || data.length === 0) { topBottomSection.style.display = 'none'; return; }
-        topBottomSection.style.display = 'flex';
-        const top5Data = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', -Infinity)) - parseNumber(safeGet(a, 'Revenue w/DF', -Infinity))).slice(0, TOP_N_TABLES);
-        top5Data.forEach(row => { /* ... [implementation unchanged] ... */ });
-        const bottom5Data = [...data].sort((a, b) => calculateQtdGap(a) - calculateQtdGap(b)).slice(0, TOP_N_TABLES); // Corrected sort
-        bottom5Data.forEach(row => { /* ... [implementation unchanged] ... */ });
-    };
+
+        if (!isSingleTerritory || data.length === 0) {
+            topBottomSection.style.display = 'none'; // Hide the section
+            return;
+        }
+
+        topBottomSection.style.display = 'flex'; // Show the section (use flex for side-by-side)
+
+        // --- Top 5 Table (Revenue) ---
+        const top5Data = [...data]
+            .sort((a, b) => {
+                // Sort descending by Revenue w/DF. Handle NaN by placing them lower.
+                const revA = parseNumber(safeGet(a, 'Revenue w/DF', -Infinity));
+                const revB = parseNumber(safeGet(b, 'Revenue w/DF', -Infinity));
+                return revB - revA;
+            })
+            .slice(0, TOP_N_TABLES);
+
+        top5Data.forEach(row => {
+            const tr = top5TableBody.insertRow();
+            const storeName = safeGet(row, 'Store', null);
+            tr.dataset.storeName = storeName; // For highlighting and details
+            tr.onclick = () => {
+                showStoreDetails(row);
+                highlightTableRow(storeName);
+            };
+
+            const revenue = parseNumber(safeGet(row, 'Revenue w/DF', NaN));
+            const revAR = calculateRevARPercent(row); // Use helper
+            const unitAch = calculateUnitAchievementPercent(row); // Use helper
+            const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+            tr.insertCell().textContent = storeName;
+            tr.insertCell().textContent = formatCurrency(revenue);
+            tr.insertCell().textContent = formatPercent(revAR);
+            tr.insertCell().textContent = formatPercent(unitAch);
+            tr.insertCell().textContent = formatNumber(visits);
+        });
+
+        // --- Bottom 5 Table (QTD Gap - Opportunities) ---
+        const bottom5Data = [...data]
+            .sort((a, b) => {
+                // ** CORRECTED SORT ** Sort ascending by QTD Gap (Revenue - Target). Lowest Gap first.
+                // Handle undefined gaps (due to NaN revenue/target) by placing them highest (Infinity).
+                const gapA = calculateQtdGap(a);
+                const gapB = calculateQtdGap(b);
+                return gapA - gapB; // Lower gap (better performance relative to target) comes first
+            })
+            .slice(0, TOP_N_TABLES);
+
+         bottom5Data.forEach(row => {
+             const tr = bottom5TableBody.insertRow();
+             const storeName = safeGet(row, 'Store', null);
+             tr.dataset.storeName = storeName;
+             tr.onclick = () => {
+                 showStoreDetails(row);
+                 highlightTableRow(storeName);
+             };
+
+             const qtdGap = calculateQtdGap(row); // Use helper
+             const revAR = calculateRevARPercent(row); // Use helper
+             const unitAch = calculateUnitAchievementPercent(row); // Use helper
+             const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+             tr.insertCell().textContent = storeName;
+             tr.insertCell().textContent = formatCurrency(qtdGap === Infinity ? NaN : qtdGap); // Format gap, handle Infinity case used for sorting undefined
+             tr.insertCell().textContent = formatPercent(revAR);
+             tr.insertCell().textContent = formatPercent(unitAch);
+             tr.insertCell().textContent = formatNumber(visits);
+         });
+     };
+
 
     const updateCharts = (data) => {
-        if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
+        if (mainChartInstance) {
+            mainChartInstance.destroy();
+            mainChartInstance = null;
+        }
+
         if (data.length === 0 || !mainChartCanvas) return;
+
+        // --- Main Chart: Revenue Performance Bar Chart ---
         const sortedData = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', 0)) - parseNumber(safeGet(a, 'Revenue w/DF', 0)));
         const chartData = sortedData.slice(0, TOP_N_CHART);
-        const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown'));
+
+        const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown')); // Provide default label
         const revenueDataSet = chartData.map(row => parseNumber(safeGet(row, 'Revenue w/DF', 0)));
         const targetDataSet = chartData.map(row => parseNumber(safeGet(row, 'QTD Revenue Target', 0)));
-        const backgroundColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)');
-        const borderColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)');
-        mainChartInstance = new Chart(mainChartCanvas, { /* ... [options unchanged] ... */ });
+
+        const backgroundColors = chartData.map((row, index) => {
+             const revenue = revenueDataSet[index];
+             const target = targetDataSet[index];
+             return revenue >= target ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)';
+        });
+        const borderColors = chartData.map((row, index) => {
+             const revenue = revenueDataSet[index];
+             const target = targetDataSet[index];
+             return revenue >= target ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+        });
+
+
+        mainChartInstance = new Chart(mainChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Revenue (incl. DF)',
+                        data: revenueDataSet,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'QTD Revenue Target',
+                        data: targetDataSet,
+                        type: 'line', // Show target as a line overlay
+                        borderColor: 'rgba(255, 206, 86, 1)', // Yellow line
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        fill: false,
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#e0e0e0', callback: (value) => formatCurrency(value) },
+                        grid: { color: 'rgba(224, 224, 224, 0.2)' }
+                    },
+                    x: {
+                        ticks: { color: '#e0e0e0' },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } },
+                    tooltip: {
+                        callbacks: {
+                             label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                     if (context.dataset.type === 'line' || context.dataset.label.toLowerCase().includes('target')) {
+                                          label += formatCurrency(context.parsed.y);
+                                     } else {
+                                          label += formatCurrency(context.parsed.y);
+                                          // Add % Target achievement to tooltip for the bar if data exists
+                                          if (chartData && chartData[context.dataIndex]){
+                                               const storeData = chartData[context.dataIndex];
+                                               const percentTarget = parsePercent(safeGet(storeData, '% Quarterly Revenue Target', 0));
+                                               label += ` (${formatPercent(percentTarget)} of Qtr Target)`;
+                                          }
+                                     }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const storeName = labels[index];
+                        // Find the original data row from filteredData, not just chartData which might be sliced/sorted differently
+                        const storeData = filteredData.find(row => safeGet(row, 'Store', null) === storeName);
+                        if (storeData) {
+                            showStoreDetails(storeData);
+                             highlightTableRow(storeName);
+                        }
+                    }
+                }
+            }
+        });
     };
 
-    // ** UPDATED ** Attach Rate Table filtering logic
+    // --- UPDATED updateAttachRateTable to exclude blanks from footer average ---
+    // --- Removed % Quarterly Revenue Target Column ---
     const updateAttachRateTable = (data) => {
-        if (!attachRateTableBody || !attachRateTableFooter) return;
+        if (!attachRateTableBody || !attachRateTableFooter) return; // Exit if elements don't exist
         attachRateTableBody.innerHTML = '';
         attachRateTableFooter.innerHTML = '';
 
-        // Original data length check for status/footer calculation
-        const originalDataLength = data.length;
-        if (originalDataLength === 0) {
+        if (data.length === 0) {
             if(attachTableStatus) attachTableStatus.textContent = 'No data to display based on filters.';
             return;
         }
 
-        // Filter out rows where ALL attach rates are 0%
-        const attachDataToShow = data.filter(row => {
-            // Use ATTACH_RATE_KEYS defined globally
-            return ATTACH_RATE_KEYS.some(key => {
-                // Use safeGet with null default to parse correctly, treat NaN from parse as 0 for this check
-                const val = parsePercent(safeGet(row, key, null));
-                return !isNaN(val) && val > 0;
-            });
-        });
-
-        // Sort the filtered data based on currentSort state
-        const sortedAttachData = [...attachDataToShow].sort((a, b) => {
-             let valA = safeGet(a, currentSort.column, null);
+        // Sort data based on currentSort state for this table
+        const sortedData = [...data].sort((a, b) => {
+             let valA = safeGet(a, currentSort.column, null); // Use null default for comparison consistency
              let valB = safeGet(b, currentSort.column, null);
+
+             // Handle nulls first: consistently place them at the beginning or end
              if (valA === null && valB === null) return 0;
-             if (valA === null) return currentSort.ascending ? -1 : 1;
-             if (valB === null) return currentSort.ascending ? 1 : -1;
-             const isPercentCol = currentSort.column.includes('Attach Rate');
+             if (valA === null) return currentSort.ascending ? -1 : 1; // Nulls first when ascending
+             if (valB === null) return currentSort.ascending ? 1 : -1; // Nulls first when ascending
+
+             // Attempt numeric conversion for sorting if applicable
+             const isPercentCol = currentSort.column.includes('Attach Rate'); // Only attach rates here
              const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA);
              const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
-             if (!isNaN(numA) && !isNaN(numB)) { return currentSort.ascending ? numA - numB : numB - numA; }
-             else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+
+             if (!isNaN(numA) && !isNaN(numB)) {
+                 // Numeric comparison
+                 return currentSort.ascending ? numA - numB : numB - numA;
+             } else {
+                 // String comparison (case-insensitive) for Store column primarily
+                 valA = String(valA).toLowerCase();
+                 valB = String(valB).toLowerCase();
+                 return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+             }
          });
 
-        // Calculate averages for highlighting AND footer (use original 'data' for averages)
+
+        // Calculate averages for highlighting AND footer (excluding blanks)
+        // Removed '% Quarterly Revenue Target' from metrics to average
+        const averageMetrics = [
+             'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
+             'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
+        ];
         const averages = {};
-        ATTACH_RATE_KEYS.forEach(key => { // Use ATTACH_RATE_KEYS
-             let sum = 0; let count = 0;
-             data.forEach(row => { // Iterate original data for averages
+        averageMetrics.forEach(key => {
+             let sum = 0;
+             let count = 0;
+             data.forEach(row => {
                  const val = safeGet(row, key, null);
-                 if (isValidForAverage(val)) { sum += parsePercent(val); count++; }
+                 if (isValidForAverage(val)) { // Keep original check for attach rates (0% is valid)
+                     sum += parsePercent(val);
+                     count++;
+                 }
              });
              averages[key] = count === 0 ? NaN : sum / count;
          });
 
-        // Populate table body using the filtered & sorted data
-        sortedAttachData.forEach(row => {
+
+        sortedData.forEach(row => {
             const tr = document.createElement('tr');
-            const storeName = safeGet(row, 'Store', null);
-            if (storeName) {
+            const storeName = safeGet(row, 'Store', null); // Get store name safely
+            if (storeName) { // Only add rows with a valid store name
                  tr.dataset.storeName = storeName;
-                 tr.onclick = () => { showStoreDetails(row); highlightTableRow(storeName); };
-                 // Define columns for the attach rate table
+                 tr.onclick = () => {
+                     showStoreDetails(row);
+                     highlightTableRow(storeName);
+                 };
+
+                 // Define columns and their formatting/highlighting logic
+                 // Removed '% Quarterly Revenue Target' column definition
                  const columns = [
-                     { key: 'Store', format: (val) => val },
-                     // Use ATTACH_RATE_KEYS to generate columns dynamically if needed, or list manually
+                     { key: 'Store', format: (val) => val }, // Keep store name as is
                      { key: 'Tablet Attach Rate', format: formatPercent, highlight: true },
                      { key: 'PC Attach Rate', format: formatPercent, highlight: true },
                      { key: 'NC Attach Rate', format: formatPercent, highlight: true },
@@ -821,41 +1043,59 @@ document.addEventListener('DOMContentLoaded', () => {
                      { key: 'ME Attach Rate', format: formatPercent, highlight: true },
                      { key: 'NCME Attach Rate', format: formatPercent, highlight: true },
                  ];
+
                  columns.forEach(col => {
                      const td = document.createElement('td');
-                     const rawValue = safeGet(row, col.key, null);
-                     const isPercentCol = col.key.includes('Attach Rate');
+                     const rawValue = safeGet(row, col.key, null); // Get raw value safely
+                     // Determine if parsing as percent is needed
+                     // Adjusted isPercentCol check slightly as % Target is gone
+                     const isPercentCol = col.key.includes('Attach Rate'); // Only attach rates
+                     // Use parsePercent for percent-like columns, parseNumber otherwise, to get numeric value for comparison
                      const numericValue = isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue);
+
                      let formattedValue;
-                     if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue))) { formattedValue = 'N/A'; }
-                     else { formattedValue = isPercentCol ? col.format(numericValue) : rawValue; }
-                     td.textContent = formattedValue;
-                     td.title = `${col.key}: ${formattedValue}`;
-                     if (col.highlight && averages[col.key] !== undefined && !isNaN(numericValue)) {
-                         td.classList.add(numericValue >= averages[col.key] ? 'highlight-green' : 'highlight-red');
+                     // Display N/A if raw value is null or resulted in NaN (except Store column)
+                     if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue))) {
+                         formattedValue = 'N/A';
+                     } else {
+                         // Format the numeric value if percent, otherwise use raw (which might be string like Store name)
+                         formattedValue = isPercentCol ? col.format(numericValue) : rawValue;
                      }
+
+
+                     td.textContent = formattedValue;
+                     td.title = `${col.key}: ${formattedValue}`; // Add tooltip
+
+                     // Apply highlighting based on average (only if value is numeric)
+                     if (col.highlight && averages[col.key] !== undefined && !isNaN(numericValue)) {
+                          if (numericValue >= averages[col.key]) {
+                              td.classList.add('highlight-green');
+                          } else {
+                              td.classList.add('highlight-red');
+                          }
+                      }
                      tr.appendChild(td);
                  });
+
                  attachRateTableBody.appendChild(tr);
-             }
+             } // End if(storeName)
         });
 
-        // Add Average Row to Footer (calculated from original 'data')
-        if (originalDataLength > 0) {
+        // Add Average Row to Footer using calculated averages (which exclude blanks)
+        if (data.length > 0) { // Check if there was any data to calculate averages from
             const footerRow = attachRateTableFooter.insertRow();
             const avgLabelCell = footerRow.insertCell();
-            avgLabelCell.textContent = 'Filtered Avg*';
-            avgLabelCell.title = 'Average calculated only using stores with valid data for each column from the initial filter selection';
+            avgLabelCell.textContent = 'Filtered Avg*'; // Add asterisk note
+            avgLabelCell.title = 'Average calculated only using stores with valid data for each column';
             avgLabelCell.style.textAlign = "right";
             avgLabelCell.style.fontWeight = "bold";
-            // Add the Store column blank cell
-            // footerRow.insertCell(); // Add blank cell for store name alignment if needed
 
-            // Use ATTACH_RATE_KEYS for footer cells
-            ATTACH_RATE_KEYS.forEach(key => {
+            // Use the same metrics keys used for calculation (which no longer includes % Qtr Rev Target)
+            averageMetrics.forEach(key => {
                  const td = footerRow.insertCell();
-                 const avgValue = averages[key];
-                 td.textContent = formatPercent(avgValue);
+                 const avgValue = averages[key]; // Already calculated excluding blanks
+                 td.textContent = formatPercent(avgValue); // Format the calculated average
+                 // Count valid entries for tooltip
                  let validCount = 0;
                  data.forEach(row => { if (isValidForAverage(safeGet(row, key, null))) validCount++; });
                  td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`;
@@ -863,37 +1103,354 @@ document.addEventListener('DOMContentLoaded', () => {
              });
          }
 
-        // Update status text based on the length of the *shown* data
-        if(attachTableStatus) attachTableStatus.textContent = `Showing ${attachDataToShow.length} stores with non-zero attach rates. Click row for details. Click headers to sort.`;
-        updateSortArrows(); // Update arrows based on currentSort state
+        if(attachTableStatus) attachTableStatus.textContent = `Showing ${sortedData.length} stores. Click row for details. Click headers to sort.`;
+        updateSortArrows();
     };
 
-    const handleSort = (event) => { /* ... [implementation unchanged] ... */ };
-    const updateSortArrows = () => { /* ... [implementation unchanged] ... */ };
-    const showStoreDetails = (storeData) => { /* ... [implementation unchanged] ... */ };
-    const hideStoreDetails = () => { /* ... [implementation unchanged] ... */ };
-    const highlightTableRow = (storeName) => { /* ... [implementation unchanged] ... */ };
-    const exportData = () => { /* ... [implementation unchanged] ... */ };
-    const generateEmailBody = () => { /* ... [implementation unchanged] ... */ };
-    const getFilterSummary = () => { /* ... [implementation unchanged] ... */ };
-    const handleShareEmail = () => { /* ... [implementation unchanged] ... */ };
-    const selectAllOptions = (selectElement) => { /* ... [implementation unchanged] ... */ };
-    const deselectAllOptions = (selectElement) => { /* ... [implementation unchanged] ... */ };
+    const handleSort = (event) => {
+         const headerCell = event.target.closest('th');
+         if (!headerCell || !headerCell.classList.contains('sortable')) return;
+
+         const sortKey = headerCell.dataset.sort;
+         if (!sortKey) return; // No sort key defined
+
+         if (currentSort.column === sortKey) {
+             currentSort.ascending = !currentSort.ascending;
+         } else {
+             currentSort.column = sortKey;
+             currentSort.ascending = true; // Default to ascending for new column
+         }
+         // IMPORTANT: Update the attach rate table using the currently *globally filtered* data
+         updateAttachRateTable(filteredData);
+    };
+
+
+    const updateSortArrows = () => {
+        if (!attachRateTable) return;
+        attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => {
+            arrow.classList.remove('asc', 'desc');
+            arrow.textContent = ''; // Clear arrow text
+        });
+        // Safely attempt to query the header using CSS.escape for potentially complex names
+        try {
+            const currentHeader = attachRateTable.querySelector(`th[data-sort="${CSS.escape(currentSort.column)}"] .sort-arrow`);
+            if (currentHeader) {
+                currentHeader.classList.add(currentSort.ascending ? 'asc' : 'desc');
+                // Add arrow character for visual cue
+                currentHeader.textContent = currentSort.ascending ? ' ▲' : ' ▼'; // Add space before arrow
+            }
+        } catch (e) {
+            console.error("Error updating sort arrows for column:", currentSort.column, e);
+        }
+    };
+
+    // Updated showStoreDetails to include more fields and Map Link
+    const showStoreDetails = (storeData) => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+
+        // --- Generate Address String ---
+        const addressParts = [
+            safeGet(storeData, 'ADDRESS1', null), // Use null default
+            safeGet(storeData, 'CITY', null),
+            safeGet(storeData, 'STATE', null),
+            safeGet(storeData, 'ZIPCODE', null)
+        ].filter(Boolean); // Filter out null/empty parts
+        const addressString = addressParts.length > 0 ? addressParts.join(', ') : null;
+
+        // --- Generate Google Maps Link ---
+        const latitude = parseFloat(safeGet(storeData, 'LATITUDE_ORG', NaN)); // Use NaN default
+        const longitude = parseFloat(safeGet(storeData, 'LONGITUDE_ORG', NaN));
+        let mapsLinkHtml = '';
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`; // Corrected Maps URL
+            mapsLinkHtml = `<p><a href="${mapsUrl}" target="_blank" title="Open in Google Maps">View on Google Maps</a></p>`;
+        } else {
+            mapsLinkHtml = `<p style="color: #aaa; font-style: italic;">(Map coordinates not available)</p>`;
+        }
+
+        // --- Generate Flag Summary (using FLAG_HEADERS defined at top) ---
+        let flagSummaryHtml = FLAG_HEADERS.map(flag => {
+            const flagValue = safeGet(storeData, flag); // Get raw value
+            const isTrue = (flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1');
+            return `<span title="${flag}" data-flag="${isTrue}">${flag.replace(/_/g, ' ')} ${isTrue ? '✔' : '✘'}</span>`;
+        }).join(' | '); // Join with separator
+
+
+        // --- Construct Details HTML ---
+        let detailsHtml = `<p><strong>Store:</strong> ${safeGet(storeData, 'Store')}</p>`;
+        if (addressString) {
+             detailsHtml += `<p><strong>Address:</strong> ${addressString}</p>`;
+        }
+        detailsHtml += mapsLinkHtml; // Add the generated map link paragraph
+        detailsHtml += `<hr>`;
+        // Combine IDs, provide 'N/A' if specific ID is missing
+        detailsHtml += `<p><strong>IDs:</strong> Store: ${safeGet(storeData, 'STORE ID')} | Org: ${safeGet(storeData, 'ORG_STORE_ID')} | CV: ${safeGet(storeData, 'CV_STORE_ID')} | CinglePoint: ${safeGet(storeData, 'CINGLEPOINT_ID')}</p>`;
+        // Combine Type/Tier info
+        detailsHtml += `<p><strong>Type:</strong> ${safeGet(storeData, 'STORE_TYPE_NAME')} | Nat Tier: ${safeGet(storeData, 'National_Tier')} | Merch Lvl: ${safeGet(storeData, 'Merchandising_Level')} | Comb Tier: ${safeGet(storeData, 'Combined_Tier')}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Hierarchy:</strong> ${safeGet(storeData, 'REGION')} > ${safeGet(storeData, 'DISTRICT')} > ${safeGet(storeData, 'Q2 Territory')}</p>`;
+        detailsHtml += `<p><strong>FSM:</strong> ${safeGet(storeData, 'FSM NAME')}</p>`;
+        detailsHtml += `<p><strong>Channel:</strong> ${safeGet(storeData, 'CHANNEL')} / ${safeGet(storeData, 'SUB_CHANNEL')}</p>`;
+        detailsHtml += `<p><strong>Dealer:</strong> ${safeGet(storeData, 'DEALER_NAME')}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Visits:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Visit count', 0)))} | <strong>Trainings:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Trainings', 0)))}</p>`;
+        detailsHtml += `<p><strong>Connectivity:</strong> ${formatPercent(parsePercent(safeGet(storeData, 'Retail Mode Connectivity', 0)))}</p>`;
+        detailsHtml += `<hr>`;
+        detailsHtml += `<p><strong>Flags:</strong> ${flagSummaryHtml}</p>`; // Add the generated flag summary
+
+        // --- Update DOM ---
+        storeDetailsContent.innerHTML = detailsHtml;
+        storeDetailsSection.style.display = 'block';
+        closeStoreDetailsButton.style.display = 'inline-block';
+        storeDetailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); // Scroll to details when shown
+    };
+
+    const hideStoreDetails = () => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+        storeDetailsContent.innerHTML = 'Select a store from the table or chart for details, or apply filters resulting in a single store.';
+        storeDetailsSection.style.display = 'none';
+        closeStoreDetailsButton.style.display = 'none';
+        highlightTableRow(null); // Remove table row highlight
+    };
+
+     // ** UPDATED ** to handle highlighting across multiple tables
+     const highlightTableRow = (storeName) => {
+         // Remove highlight from any previously selected row across all tables
+         if (selectedStoreRow) {
+             selectedStoreRow.classList.remove('selected-row');
+             selectedStoreRow = null; // Reset tracker
+         }
+         // If a storeName is provided, find and highlight the corresponding row in *any* table
+         if (storeName) {
+             const tables = [attachRateTableBody, top5TableBody, bottom5TableBody];
+             for (const tableBody of tables) {
+                 if (tableBody) {
+                     try {
+                         // Use querySelector for safety with special characters
+                         const rowToHighlight = tableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
+                         if (rowToHighlight) {
+                             rowToHighlight.classList.add('selected-row');
+                             selectedStoreRow = rowToHighlight; // Track the newly selected row
+                             break; // Stop searching once found
+                         }
+                     } catch (e) {
+                         console.error("Error selecting table row:", e);
+                     }
+                 }
+             }
+         }
+    };
+
+
+    const exportData = () => {
+        if (filteredData.length === 0) {
+            alert("No filtered data to export.");
+            return;
+        }
+        try {
+            if (!attachRateTable) throw new Error("Attach rate table not found.");
+            // Get headers directly from the updated HTML table header structure
+            const headers = Array.from(attachRateTable.querySelectorAll('thead th'))
+                                  .map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim()); // Get clean headers
+
+             const dataToExport = filteredData.map(row => {
+                return headers.map(header => {
+                    // Need to handle the case where the header name in HTML might differ from the data key
+                    // Example: 'Tablet' header maps to 'Tablet Attach Rate' key
+                    let dataKey = header; // Assume header matches key initially
+                    if (header === 'Tablet') dataKey = 'Tablet Attach Rate';
+                    else if (header === 'PC') dataKey = 'PC Attach Rate';
+                    else if (header === 'NC') dataKey = 'NC Attach Rate';
+                    else if (header === 'TWS') dataKey = 'TWS Attach Rate';
+                    else if (header === 'WW') dataKey = 'WW Attach Rate';
+                    else if (header === 'ME') dataKey = 'ME Attach Rate';
+                    else if (header === 'NCME') dataKey = 'NCME Attach Rate';
+                    // Add other mappings if header text differs from data key
+
+                    let value = safeGet(row, dataKey, ''); // Get raw value using the potentially mapped key
+
+                    // Check if the *data key* indicates a percentage or rate
+                    const isPercentLike = dataKey.includes('%') || dataKey.includes('Rate') || dataKey.includes('Ach') || dataKey.includes('Connectivity') || dataKey.includes('Elite');
+
+                    if (isPercentLike) {
+                        // Parse as percent, export as decimal number, handle non-numeric gracefully
+                         const numVal = parsePercent(value);
+                         value = isNaN(numVal) ? '' : numVal; // Export empty if not a valid percentage
+                     } else {
+                         // Handle potential commas and quotes in string values
+                         if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                             value = `"${value.replace(/"/g, '""')}"`; // Quote fields with commas, quotes, or newlines; escape internal quotes
+                         }
+                         // Preserve numbers as numbers, leave other types as strings
+                         const numVal = parseNumber(value);
+                          // Check if it's NOT percent-like AND is a valid number AND not boolean
+                         if (!isPercentLike && !isNaN(numVal) && typeof value !== 'boolean') {
+                             value = numVal;
+                         }
+                     }
+                    return value;
+                });
+             });
+
+            let csvContent = "data:text/csv;charset=utf-8,"
+                + headers.join(",") + "\n"
+                + dataToExport.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "fsm_dashboard_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Error exporting CSV:", error);
+            alert("Error generating CSV export. See console for details.");
+        }
+    };
+
+    const generateEmailBody = () => {
+        if (filteredData.length === 0) {
+            return "No data available based on current filters.";
+        }
+        let body = "FSM Dashboard Summary:\n";
+        body += "---------------------------------\n";
+        body += `Filters Applied: ${getFilterSummary()}\n`;
+        body += `Stores Found: ${filteredData.length}\n`;
+        body += "---------------------------------\n\n";
+        body += "Performance Summary:\n";
+        body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`;
+        body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
+        body += `- QTD Gap: ${qtdGapValue?.textContent || 'N/A'}\n`;
+        body += `- % Store Quarterly Target: ${percentQuarterlyStoreTargetValue?.textContent || 'N/A'}\n`;
+        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'}\n`; // Uses updated calculation
+        body += `- Total Units (incl. DF): ${unitsWithDFValue?.textContent || 'N/A'}\n`;
+        body += `- Unit Achievement %: ${unitAchievementValue?.textContent || 'N/A'}\n`;
+        body += `- Total Visits: ${visitCountValue?.textContent || 'N/A'}\n`;
+        body += `- Avg. Connectivity: ${retailModeConnectivityValue?.textContent || 'N/A'}\n\n`; // Uses updated calculation
+        body += "Mysteryshop & Training (Avg*):\n"; // Added asterisk note
+        body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`; // Uses updated calculation
+        body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`; // Uses updated calculation
+        body += `- Post Training Score: ${postTrainingScoreValue?.textContent || 'N/A'}\n`;
+        body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'}\n\n`;
+        body += "*Averages calculated only using stores with valid, non-zero data for each metric where applicable (Connectivity, Rep Skill, PMR).\n\n"; // Updated note
+
+
+        // Add Top/Bottom 5 if applicable
+        const territoriesInData = new Set(filteredData.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
+        if (territoriesInData.size === 1) {
+             const territoryName = territoriesInData.values().next().value; // Get the single territory name
+             body += `--- Territory: ${territoryName} ---\n`;
+
+             // Top 5
+             const top5Data = [...filteredData]
+                 .sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', -Infinity)) - parseNumber(safeGet(a, 'Revenue w/DF', -Infinity)))
+                 .slice(0, TOP_N_TABLES);
+             if (top5Data.length > 0) {
+                 body += "Top 5 (Revenue):\n";
+                 top5Data.forEach((row, i) => {
+                     body += `${i+1}. ${safeGet(row, 'Store')} - Rev: ${formatCurrency(parseNumber(safeGet(row, 'Revenue w/DF')))}\n`;
+                 });
+                 body += "\n";
+             }
+
+             // Bottom 5 (** CORRECTED SORT **)
+             const bottom5Data = [...filteredData]
+                  .sort((a, b) => calculateQtdGap(a) - calculateQtdGap(b)) // Sort ascending by gap
+                 .slice(0, TOP_N_TABLES);
+              if (bottom5Data.length > 0) {
+                 body += "Bottom 5 (Opportunities by QTD Gap):\n";
+                 bottom5Data.forEach((row, i) => {
+                     body += `${i+1}. ${safeGet(row, 'Store')} - Gap: ${formatCurrency(calculateQtdGap(row))}\n`;
+                 });
+                 body += "\n";
+             }
+        }
+
+
+        body += "---------------------------------\n";
+        body += "Generated by FSM Dashboard\n";
+        return body;
+    };
+
+    const getFilterSummary = () => {
+        let summary = [];
+        if (regionFilter?.value !== 'ALL') summary.push(`Region: ${regionFilter.value}`);
+        if (districtFilter?.value !== 'ALL') summary.push(`District: ${districtFilter.value}`);
+        const territories = territoryFilter ? Array.from(territoryFilter.selectedOptions).map(o => o.value) : [];
+        if (territories.length > 0) summary.push(`Territories: ${territories.length === 1 ? territories[0] : territories.length + ' selected'}`);
+        if (fsmFilter?.value !== 'ALL') summary.push(`FSM: ${fsmFilter.value}`);
+        if (channelFilter?.value !== 'ALL') summary.push(`Channel: ${channelFilter.value}`);
+        if (subchannelFilter?.value !== 'ALL') summary.push(`Subchannel: ${subchannelFilter.value}`);
+        if (dealerFilter?.value !== 'ALL') summary.push(`Dealer: ${dealerFilter.value}`);
+        const stores = storeFilter ? Array.from(storeFilter.selectedOptions).map(o => o.value) : [];
+         if (stores.length > 0) summary.push(`Stores: ${stores.length === 1 ? stores[0] : stores.length + ' selected'}`);
+         const flags = Object.entries(flagFiltersCheckboxes).filter(([key, input]) => input && input.checked).map(([key])=> key.replace(/_/g, ' '));
+         if (flags.length > 0) summary.push(`Attributes: ${flags.join(', ')}`);
+        return summary.length > 0 ? summary.join('; ') : 'None';
+    };
+
+    const handleShareEmail = () => {
+        if (!emailRecipientInput || !shareStatus) return;
+        const recipient = emailRecipientInput.value;
+        if (!recipient || !/\S+@\S+\.\S+/.test(recipient)) {
+            shareStatus.textContent = "Please enter a valid recipient email address.";
+            return;
+        }
+        try {
+            const subject = `FSM Dashboard Summary - ${new Date().toLocaleDateString()}`;
+            const body = generateEmailBody();
+            const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+             if (mailtoLink.length > 2000) {
+                 shareStatus.textContent = "Generated email body is too long for mailto link. Try applying more filters.";
+                 console.warn("Mailto link length exceeds 2000 characters:", mailtoLink.length);
+                 return;
+             }
+            window.location.href = mailtoLink;
+            shareStatus.textContent = "Email client should open. Please review and send.";
+        } catch (error) {
+            console.error("Error generating mailto link:", error);
+            shareStatus.textContent = "Error generating email content.";
+        }
+    };
+
+     const selectAllOptions = (selectElement) => {
+         if (!selectElement) return;
+         Array.from(selectElement.options).forEach(option => option.selected = true);
+         // Trigger hierarchy update after selection change
+         if (selectElement === territoryFilter) {
+            updateStoreFilterOptionsBasedOnHierarchy();
+         }
+    };
+
+     const deselectAllOptions = (selectElement) => {
+         if (!selectElement) return;
+         selectElement.selectedIndex = -1; // Deselects all
+          // Trigger hierarchy update after selection change
+         if (selectElement === territoryFilter) {
+             updateStoreFilterOptionsBasedOnHierarchy();
+         }
+    };
+
 
     // --- Event Listeners ---
     excelFileInput?.addEventListener('change', handleFile);
     applyFiltersButton?.addEventListener('click', applyFilters);
-    storeSearch?.addEventListener('input', filterStoreOptions);
+    storeSearch?.addEventListener('input', filterStoreOptions); // Update visual list on search input
     exportCsvButton?.addEventListener('click', exportData);
     shareEmailButton?.addEventListener('click', handleShareEmail);
     closeStoreDetailsButton?.addEventListener('click', hideStoreDetails);
+
+    // Multi-select buttons
     territorySelectAll?.addEventListener('click', () => selectAllOptions(territoryFilter));
     territoryDeselectAll?.addEventListener('click', () => deselectAllOptions(territoryFilter));
-    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilter));
-    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilter));
+    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilter)); // No hierarchy update needed here
+    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilter)); // No hierarchy update needed here
+
+    // Table Sorting (Attach Rate Table Only)
     attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
 
     // --- Initial Setup ---
-    resetUI();
+    resetUI(); // Ensure clean state on load
 
 }); // End DOMContentLoaded
