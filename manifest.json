@@ -1,0 +1,17 @@
+{
+  "name": "FSM Performance Dashboard",
+  "short_name": "FSM Dash",
+  "description": "Enhanced dashboard to analyze and visualize FSM Excel data.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f3f2f2",
+  "theme_color": "#2c2c2c",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
