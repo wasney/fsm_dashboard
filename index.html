@@ -6,11 +6,12 @@
     <title>FSM Dashboard Enhanced</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <meta name="theme-color" content="#2c2c2c">
-</head>
-<body>
-
-    <h1>FSM Performance Dashboard 2.0</h1>
+    <meta name="theme-color" content="#1e1e1e"> </head>
+<body> <header class="page-header">
+        <h1>FSM Performance Dashboard</h1>
+        <button id="themeToggle" class="theme-toggle" title="Toggle Light/Dark Mode">
+            </button>
+    </header>
 
     <p class="upload-instructions">Upload the FSM data Excel file (.xlsx or .xls).</p>
 
@@ -20,7 +21,7 @@
         <div id="loadingIndicator" style="display: none;">
             <div class="spinner"></div> Processing file...
         </div>
-        </div>
+    </div>
 
     <div id="filterArea" class="card" style="display: none;">
         <h2>Filters</h2>
@@ -110,7 +111,7 @@
                 <p title="Calculated Gap (Total Revenue - QTD Target) for filtered stores">QTD Gap: <strong id="qtdGapValue">N/A</strong></p>
                 <p title="Sum of 'Quarterly Revenue Target' for filtered stores">Full Quarter Target: <strong id="quarterlyRevenueTargetValue">N/A</strong></p>
                 <p title="Overall % Quarterly Target (Total Revenue / Total Quarterly Target)">% Store Quarterly Target: <strong id="percentQuarterlyStoreTargetValue">N/A</strong></p>
-                <p title="Calculated Rev AR% (Total Revenue / Total QTD Target)">Rev AR%: <strong id="revARValue">N/A</strong></p>
+                <p title="Average 'Rev AR%' across stores with data">Rev AR%: <strong id="revARValue">N/A</strong></p>
 
                  <p title="Sum of 'Unit w/ DF' for filtered stores">Total Units (incl. DF): <strong id="unitsWithDFValue">N/A</strong></p>
                 <p title="Sum of 'Unit Target' for filtered stores">Unit Target: <strong id="unitTargetValue">N/A</strong></p>
@@ -118,7 +119,7 @@
 
                  <p title="Sum of 'Visit count' for filtered stores">Total Visits: <strong id="visitCountValue">N/A</strong></p>
                 <p title="Sum of 'Trainings' for filtered stores">Total Trainings: <strong id="trainingCountValue">N/A</strong></p>
-                <p title="Average 'Retail Mode Connectivity' across stores with non-zero data">Avg. Retail Mode Connectivity: <strong id="retailModeConnectivityValue">N/A</strong></p>
+                <p title="Average 'Retail Mode Connectivity' across stores with data">Avg. Retail Mode Connectivity: <strong id="retailModeConnectivityValue">N/A</strong></p>
 
                  <p id="percentQuarterlyTerritoryTargetP" style="display: none;" title="Average '%Quarterly Territory Rev Target' across stores with data">% Territory Quarterly Target: <strong id="percentQuarterlyTerritoryTargetValue">N/A</strong></p>
                  <p id="territoryRevPercentP" style="display: none;" title="Average 'Territory Rev%' across stores with data">Territory Rev Contrib %: <strong id="territoryRevPercentValue">N/A</strong></p>
@@ -127,47 +128,11 @@
             </div>
         </div>
 
-         <div id="topBottomSection" class="top-bottom-container" style="display: none;">
-            <div class="top5-card card">
-                <h3>Top 5 (Revenue)</h3>
-                <div class="table-wrapper">
-                    <table id="top5Table">
-                        <thead>
-                            <tr>
-                                <th>Store</th>
-                                <th title="Revenue w/DF">Revenue</th>
-                                <th title="Calculated Rev AR% (Total Revenue / Total QTD Target)">Rev AR%</th>
-                                <th title="Overall Unit Achievement % (Total Units / Total Unit Target)">Unit Ach %</th>
-                                <th title="Visit count">Visits</th>
-                            </tr>
-                        </thead>
-                        <tbody id="top5TableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="bottom5-card card">
-                <h3>Bottom 5 (Opportunities by QTD Gap)</h3>
-                 <div class="table-wrapper">
-                     <table id="bottom5Table">
-                         <thead>
-                             <tr>
-                                <th>Store</th>
-                                <th title="Calculated Gap (Total Revenue - QTD Target)">QTD Gap</th>
-                                <th title="Calculated Rev AR% (Total Revenue / Total QTD Target)">Rev AR%</th>
-                                <th title="Overall Unit Achievement % (Total Units / Total Unit Target)">Unit Ach %</th>
-                                <th title="Visit count">Visits</th>
-                             </tr>
-                         </thead>
-                         <tbody id="bottom5TableBody"></tbody>
-                     </table>
-                 </div>
-            </div>
-        </div>
         <div class="stats-row">
             <div id="repPmrSection" class="card rep-pmr-container">
-                <h3 title="Averages calculated only from stores with non-zero data for each metric">Mysteryshop (Filtered Avg*)</h3>
-                <p title="Average 'Rep Skill Ach' across stores with non-zero data">Rep Skill Ach: <strong id="repSkillAchValue">N/A</strong></p>
-                <p title="Average '(V)PMR Ach' across stores with non-zero data">(V)PMR Ach: <strong id="vPmrAchValue">N/A</strong></p>
+                <h3 title="Averages calculated only from stores with data for each metric">Mysteryshop (Filtered Avg*)</h3>
+                <p title="Average 'Rep Skill Ach' across stores with data">Rep Skill Ach: <strong id="repSkillAchValue">N/A</strong></p>
+                <p title="Average '(V)PMR Ach' across stores with data">(V)PMR Ach: <strong id="vPmrAchValue">N/A</strong></p>
             </div>
 
             <div id="trainingStatsSection" class="card training-stats-container">
@@ -185,7 +150,7 @@
          <div class="chart-container card" id="secondaryChartContainer" style="display: none;">
             <h3>Secondary Chart Placeholder</h3>
             <canvas id="secondaryChartCanvas"></canvas>
-             <p style="text-align:center; font-size: 0.9em; color: #a0a0a0;">Chart options coming soon.</p>
+             <p style="text-align:center; font-size: 0.9em; color: var(--text-secondary-color);">Chart options coming soon.</p>
         </div>
 
 
@@ -199,6 +164,7 @@
                      <thead>
                          <tr>
                              <th data-sort="Store" class="sortable">Store <span class="sort-arrow"></span></th>
+                             <th data-sort="% Quarterly Revenue Target" class="sortable" title="Percentage obtained of the store's Quarterly Revenue Target">% Qtr Rev Target <span class="sort-arrow"></span></th>
                              <th data-sort="Tablet Attach Rate" class="sortable" title="Tablet Attach Rate">Tablet <span class="sort-arrow"></span></th>
                              <th data-sort="PC Attach Rate" class="sortable" title="PC Attach Rate">PC <span class="sort-arrow"></span></th>
                              <th data-sort="NC Attach Rate" class="sortable" title="NC = Tablet + PC Attach Rate">NC <span class="sort-arrow"></span></th>
@@ -222,7 +188,7 @@
                 <button id="shareEmailButton">Generate & Share Email</button>
             </div>
             <p id="shareStatus" class="share-status"></p>
-            <p class="share-note">Note: This will open your default desktop email client with a pre-filled summary. You must click "Send" in the email client.</p>
+            <p class="share-note">Note: This will open your default desktop email client with a pre-filled summary. Check character limits if summary is long.</p>
         </div>
 
     </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
