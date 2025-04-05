@@ -1,4 +1,4 @@
-/* Generated: 2025-04-05 12:20:15 PM EDT - Re-implement dark/light theme toggle, carefully merging with existing code (Top 5/Bottom 5 tables included) to avoid breaking file upload. */
+/* Generated: 2025-04-05 12:28:51 PM EDT - Attempt 3: Add dark/light theme toggle, ensuring all JS code is correctly placed within DOMContentLoaded scope. */
 /* --- CSS Variables for Theming --- */
 :root {
     /* Default Light Mode Colors */
@@ -252,7 +252,7 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading-tertiary-color); f
     font-size: 1.1rem; /* Slightly smaller heading */
     margin-bottom: 0.75rem;
 }
-/* Style tables within Top/Bottom cards similar to Attach Rate table */
+/* Style tables within Top/Bottom cards */
 #top5Table, #bottom5Table {
     width: 100%;
     border-collapse: collapse;
@@ -328,7 +328,7 @@ body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark 
 #attachRateTable tbody tr { background-color: var(--card-bg-color); cursor: pointer; transition: background-color 0.15s ease; }
 #attachRateTable tbody tr:hover { background-color: var(--table-row-hover-bg-color); }
 #attachRateTable tbody tr.selected-row { background-color: var(--table-row-selected-bg-color) !important; color: var(--table-row-selected-text-color); }
-#attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical, except % target */
+#attachRateTable td:not(:first-child) { text-align: right; } /* Right-align numerical columns */
 #attachRateTable tfoot tr { background-color: var(--table-footer-bg-color); font-weight: bold; color: var(--table-footer-text-color); }
 #attachRateTable tfoot td { border-top: 2px solid var(--table-border-color); text-align: right; } /* Ensure footer cells are right-aligned */
 #attachRateTable tfoot td:first-child { text-align: right; } /* Ensure first footer cell is right-aligned */
@@ -384,4 +384,3 @@ body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark 
     .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
     .top-bottom-container { flex-wrap: nowrap; /* Prevent wrapping on large screens */ }
 }
-
