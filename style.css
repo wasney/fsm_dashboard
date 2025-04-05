@@ -1,4 +1,4 @@
-/* Generated: 2025-04-05 12:13:21 PM EDT - Add dark/light theme toggle with localStorage persistence and chart color adaptation. */
+/* Generated: 2025-04-05 12:20:15 PM EDT - Re-implement dark/light theme toggle, carefully merging with existing code (Top 5/Bottom 5 tables included) to avoid breaking file upload. */
 /* --- CSS Variables for Theming --- */
 :root {
     /* Default Light Mode Colors */
@@ -236,8 +236,75 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading-tertiary-color); f
 .summary-grid p strong { font-weight: 600; color: var(--text-color); margin-left: 5px; }
 .summary-grid p[style*="display: none"] { display: none !important; }
 
-.stats-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
-.rep-pmr-container, .training-stats-container { flex: 1 1 300px; max-width: none; }
+/* --- Top 5 / Bottom 5 Container --- */
+.top-bottom-container {
+    display: flex; /* Use flexbox for side-by-side layout */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 1rem; /* Space between the two cards */
+    margin-top: 1rem;
+}
+.top5-card, .bottom5-card {
+    flex: 1 1 400px; /* Allow flex grow/shrink, base width 400px */
+    max-width: 100%; /* Allow card to take full width if wrapping */
+    margin: 0; /* Reset default card margin */
+}
+.top5-card h3, .bottom5-card h3 {
+    font-size: 1.1rem; /* Slightly smaller heading */
+    margin-bottom: 0.75rem;
+}
+/* Style tables within Top/Bottom cards similar to Attach Rate table */
+#top5Table, #bottom5Table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+    font-size: 0.85rem;
+}
+#top5Table th, #top5Table td,
+#bottom5Table th, #bottom5Table td {
+    border: 1px solid var(--table-border-color);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--text-color);
+}
+#top5Table th, #bottom5Table th {
+    background-color: var(--table-header-bg-color);
+    font-weight: 600;
+    color: var(--table-header-text-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+#top5Table tbody tr, #bottom5Table tbody tr {
+    background-color: var(--card-bg-color); /* Use card bg for consistency */
+    cursor: pointer; /* Add cursor pointer */
+    transition: background-color 0.15s ease;
+}
+#top5Table tbody tr:hover, #bottom5Table tbody tr:hover {
+    background-color: var(--table-row-hover-bg-color);
+}
+#top5Table tbody tr.selected-row, #bottom5Table tbody tr.selected-row {
+    background-color: var(--table-row-selected-bg-color) !important; /* Highlight selected row */
+    color: var(--table-row-selected-text-color);
+}
+/* Right-align numerical columns */
+#top5Table td:not(:first-child),
+#bottom5Table td:not(:first-child) {
+    text-align: right;
+}
+
+
+.stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.rep-pmr-container, .training-stats-container {
+    flex: 1 1 300px; max-width: none; margin: 0; /* Reset */
+}
 .rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: var(--text-color); }
 .rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
 .rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: var(--text-color); }
@@ -263,8 +330,8 @@ body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark 
 #attachRateTable tbody tr.selected-row { background-color: var(--table-row-selected-bg-color) !important; color: var(--table-row-selected-text-color); }
 #attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical, except % target */
 #attachRateTable tfoot tr { background-color: var(--table-footer-bg-color); font-weight: bold; color: var(--table-footer-text-color); }
-#attachRateTable tfoot td { border-top: 2px solid var(--table-border-color); text-align: right; }
-#attachRateTable tfoot td:first-child { text-align: right; }
+#attachRateTable tfoot td { border-top: 2px solid var(--table-border-color); text-align: right; } /* Ensure footer cells are right-aligned */
+#attachRateTable tfoot td:first-child { text-align: right; } /* Ensure first footer cell is right-aligned */
 
 .highlight-green { background-color: var(--highlight-green-bg) !important; color: var(--highlight-green-text); }
 .highlight-red { background-color: var(--highlight-red-bg) !important; color: var(--highlight-red-text); }
@@ -291,9 +358,11 @@ body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark 
     .summary-grid p { font-size: 1rem; }
     .rep-pmr-container p, .training-stats-container p { font-size: 1rem; }
     .chart-container { height: 400px; }
-    #attachRateTable { font-size: 0.9rem; }
-    #attachRateTable th, #attachRateTable td { padding: 0.6rem 0.8rem; } /* Slightly adjust padding */
-    #attachRateTable th { font-size: 0.85rem; }
+    #attachRateTable, #top5Table, #bottom5Table { font-size: 0.9rem; } /* Apply to new tables */
+    #attachRateTable th, #attachRateTable td,
+    #top5Table th, #top5Table td,
+    #bottom5Table th, #bottom5Table td { padding: 0.6rem 0.8rem; } /* Slightly adjust padding */
+    #attachRateTable th, #top5Table th, #bottom5Table th { font-size: 0.85rem; }
     .share-controls { flex-direction: row; align-items: center; }
     .share-controls label { margin-bottom: 0; }
     .filter-group-store { grid-column: span 1; /* Reset span */ }
@@ -307,8 +376,12 @@ body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark 
     .card { padding: 1.5rem; margin: 1.5rem auto; }
     .filter-controls { gap: 1.2rem 2rem; }
     .chart-container { height: 450px; }
-    #attachRateTable { font-size: 0.9rem; }
-    #attachRateTable th { font-size: 0.9rem; }
-    #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
+    #attachRateTable, #top5Table, #bottom5Table { font-size: 0.9rem; }
+    #attachRateTable th, #top5Table th, #bottom5Table th { font-size: 0.9rem; }
+    #attachRateTable th, #attachRateTable td,
+    #top5Table th, #top5Table td,
+    #bottom5Table th, #bottom5Table td { padding: 0.75rem 1rem; }
     .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
+    .top-bottom-container { flex-wrap: nowrap; /* Prevent wrapping on large screens */ }
 }
+
