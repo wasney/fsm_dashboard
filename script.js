@@ -1,319 +1,387 @@
-/* Generated: 2025-04-05 12:13:21 PM EDT - Add dark/light theme toggle with localStorage persistence and chart color adaptation. */
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Configuration ---
-    const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
-        'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
-        'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
-        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%',
-        'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
-        'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
-        'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
-        'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate', 'SUPER STORE', 'GOLDEN RHINO',
-        'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE',
-        // Store Details Headers:
-        'STORE ID', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE',
-        'LATITUDE_ORG', 'LONGITUDE_ORG', // For Google Maps
-        'ORG_STORE_ID', 'CV_STORE_ID', 'CINGLEPOINT_ID', // Additional IDs
-        'STORE_TYPE_NAME', 'National_Tier', 'Merchandising_Level', 'Combined_Tier', // Store Type/Tier info
-        // Context headers if needed for display/logic
-        '%Quarterly Territory Rev Target', 'Region Rev%', 'District Rev%', 'Territory Rev%'
-    ];
-    const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE']; // Used for Flag summary in details
-    const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-    const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
-    const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6'];
-    const TOP_N_CHART = 15; // Max items to show on the bar chart
-    const THEME_KEY = 'fsmDashboardTheme'; // Key for localStorage
+/* Generated: 2025-04-05 12:20:15 PM EDT - Re-implement dark/light theme toggle, carefully merging with existing code (Top 5/Bottom 5 tables included) to avoid breaking file upload. */
+/* --- CSS Variables for Theming --- */
+:root {
+    /* Default Light Mode Colors */
+    --bg-color: #f3f2f2;
+    --text-color: #2c2c2c;
+    --text-secondary-color: #555;
+    --text-link-color: #0056b3;
+    --text-link-hover-color: #007bff;
+    --card-bg-color: #ffffff;
+    --card-border-color: #dee2e6;
+    --card-shadow-color: rgba(0, 0, 0, 0.1);
+    --input-bg-color: #ffffff;
+    --input-border-color: #ced4da;
+    --input-text-color: #495057;
+    --input-disabled-bg-color: #e9ecef;
+    --input-disabled-text-color: #6c757d;
+    --button-bg-color: #007bff;
+    --button-text-color: #ffffff;
+    --button-hover-bg-color: #0056b3;
+    --button-secondary-bg-color: #6c757d;
+    --button-secondary-text-color: #ffffff;
+    --button-secondary-hover-bg-color: #5a6268;
+    --table-header-bg-color: #e9ecef;
+    --table-header-text-color: #495057;
+    --table-border-color: #dee2e6;
+    --table-row-hover-bg-color: #f1f1f1;
+    --table-row-selected-bg-color: #cce5ff;
+    --table-row-selected-text-color: #004085;
+    --table-footer-bg-color: #e9ecef;
+    --table-footer-text-color: #212529;
+    --highlight-green-bg: rgba(40, 167, 69, 0.15);
+    --highlight-green-text: #155724;
+    --highlight-red-bg: rgba(220, 53, 69, 0.1);
+    --highlight-red-text: #721c24;
+    --spinner-color: #007bff;
+    --spinner-track-color: rgba(0, 123, 255, 0.2);
+    --heading-color: #0056b3;
+    --heading-secondary-color: #007bff;
+    --heading-tertiary-color: #0056b3;
+    --toggle-bg: #eee;
+    --toggle-border: #ccc;
+    --toggle-icon-color: #2c2c2c;
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --chart-tick-color: #666;
+    --chart-label-color: #333;
+}
 
-    // --- DOM Elements ---
-    const bodyElement = document.body; // Reference to body
-    const themeToggleButton = document.getElementById('themeToggle');
-    const excelFileInput = document.getElementById('excelFile');
-    const statusDiv = document.getElementById('status');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const filterLoadingIndicator = document.getElementById('filterLoadingIndicator');
-    const filterArea = document.getElementById('filterArea');
-    const resultsArea = document.getElementById('resultsArea');
-    const applyFiltersButton = document.getElementById('applyFiltersButton');
+body.dark-mode {
+    /* Dark Mode Overrides */
+    --bg-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --text-secondary-color: #a0a0a0;
+    --text-link-color: #58a6ff;
+    --text-link-hover-color: #77b6ff;
+    --card-bg-color: #2c2c2c;
+    --card-border-color: #444;
+    --card-shadow-color: rgba(0, 0, 0, 0.4);
+    --input-bg-color: #333;
+    --input-border-color: #555;
+    --input-text-color: #e0e0e0;
+    --input-disabled-bg-color: #444;
+    --input-disabled-text-color: #888;
+    --button-bg-color: #3081d2;
+    --button-text-color: #ffffff;
+    --button-hover-bg-color: #58a6ff;
+    --button-secondary-bg-color: #4a4a4a;
+    --button-secondary-text-color: #ccc;
+    --button-secondary-hover-bg-color: #5a5a5a;
+    --table-header-bg-color: #3a3a3a;
+    --table-header-text-color: #f0f0f0;
+    --table-border-color: #555;
+    --table-row-hover-bg-color: #383838;
+    --table-row-selected-bg-color: #405d7a;
+    --table-row-selected-text-color: #fff;
+    --table-footer-bg-color: #333;
+    --table-footer-text-color: #eee;
+    --highlight-green-bg: rgba(42, 74, 42, 0.7);
+    --highlight-green-text: #b0ffb0;
+    --highlight-red-bg: rgba(90, 42, 42, 0.7);
+    --highlight-red-text: #ffb0b0;
+    --spinner-color: #99ccff;
+    --spinner-track-color: rgba(153, 204, 255, 0.3);
+    --heading-color: #58a6ff;
+    --heading-secondary-color: #77b6ff;
+    --heading-tertiary-color: #58a6ff;
+    --toggle-bg: #444;
+    --toggle-border: #666;
+    --toggle-icon-color: #e0e0e0;
+    --chart-grid-color: rgba(224, 224, 224, 0.2);
+    --chart-tick-color: #e0e0e0;
+    --chart-label-color: #e0e0e0;
+}
 
-    // Filter Elements
-    const regionFilter = document.getElementById('regionFilter');
-    const districtFilter = document.getElementById('districtFilter');
-    const territoryFilter = document.getElementById('territoryFilter');
-    const fsmFilter = document.getElementById('fsmFilter');
-    const channelFilter = document.getElementById('channelFilter');
-    const subchannelFilter = document.getElementById('subchannelFilter');
-    const dealerFilter = document.getElementById('dealerFilter');
-    const storeFilter = document.getElementById('storeFilter');
-    const storeSearch = document.getElementById('storeSearch');
+/* --- Global Resets & Body --- */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transition */
+}
+a { color: var(--text-link-color); }
+a:hover { color: var(--text-link-hover-color); }
+.container { max-width: 1400px; margin: 0 auto; padding: 10px; } /* Wider container */
 
-    // Flag Filter Checkboxes
-    const flagFiltersCheckboxes = FLAG_HEADERS.reduce((acc, header) => {
-        let expectedId = '';
-        switch (header) {
-            case 'SUPER STORE':       expectedId = 'superStoreFilter'; break;
-            case 'GOLDEN RHINO':      expectedId = 'goldenRhinoFilter'; break;
-            case 'GCE':               expectedId = 'gceFilter'; break;
-            case 'AI_Zone':           expectedId = 'aiZoneFilter'; break;
-            case 'Hispanic_Market':   expectedId = 'hispanicMarketFilter'; break;
-            case 'EV ROUTE':          expectedId = 'evRouteFilter'; break;
-            default: console.warn(`Unknown flag header: ${header}`); return acc;
-        }
-        const element = document.getElementById(expectedId);
-        if (element) { acc[header] = element; }
-        else { console.warn(`Flag filter checkbox not found for ID: ${expectedId} (Header: ${header})`); }
-        return acc;
-    }, {});
+/* --- Header and Theme Toggle --- */
+.page-header {
+    display: flex;
+    justify-content: center; /* Center title horizontally */
+    align-items: center;
+    position: relative; /* Needed for absolute positioning of toggle */
+    padding: 0 10px; /* Add padding */
+    margin-bottom: 1.5rem;
+}
+h1 {
+    color: var(--heading-color);
+    text-align: center;
+    margin-top: 1rem;
+    margin-bottom: 0; /* Adjust spacing */
+    font-weight: 600;
+    font-size: 1.8rem;
+    flex-grow: 1; /* Allow title to take space */
+    /* Remove left/right margin if you want toggle closer */
+}
+.theme-toggle {
+    position: absolute;
+    top: 50%; /* Center vertically */
+    right: 15px; /* Position on the right */
+    transform: translateY(-50%); /* Fine-tune vertical centering */
+    background-color: var(--toggle-bg);
+    border: 1px solid var(--toggle-border);
+    color: var(--toggle-icon-color);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2rem; /* Adjust icon size */
+    padding: 0.3rem 0.6rem;
+    line-height: 1; /* Prevent extra space */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.theme-toggle:hover {
+    opacity: 0.8;
+}
 
-    const territorySelectAll = document.getElementById('territorySelectAll');
-    const territoryDeselectAll = document.getElementById('territoryDeselectAll');
-    const storeSelectAll = document.getElementById('storeSelectAll');
-    const storeDeselectAll = document.getElementById('storeDeselectAll');
+/* --- Headings --- */
+h2 { color: var(--heading-secondary-color); text-align: center; margin-top: 0; margin-bottom: 1rem; font-weight: 500; font-size: 1.4rem; border-bottom: 1px solid var(--card-border-color); padding-bottom: 0.5rem; }
+h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading-tertiary-color); font-weight: 500; font-size: 1.15rem; text-align: center; }
 
-    // Summary Elements
-    const revenueWithDFValue = document.getElementById('revenueWithDFValue');
-    const qtdRevenueTargetValue = document.getElementById('qtdRevenueTargetValue');
-    const qtdGapValue = document.getElementById('qtdGapValue');
-    const quarterlyRevenueTargetValue = document.getElementById('quarterlyRevenueTargetValue');
-    const percentQuarterlyStoreTargetValue = document.getElementById('percentQuarterlyStoreTargetValue');
-    const revARValue = document.getElementById('revARValue');
-    const unitsWithDFValue = document.getElementById('unitsWithDFValue');
-    const unitTargetValue = document.getElementById('unitTargetValue');
-    const unitAchievementValue = document.getElementById('unitAchievementValue');
-    const visitCountValue = document.getElementById('visitCountValue');
-    const trainingCountValue = document.getElementById('trainingCountValue');
-    const retailModeConnectivityValue = document.getElementById('retailModeConnectivityValue');
-    const repSkillAchValue = document.getElementById('repSkillAchValue');
-    const vPmrAchValue = document.getElementById('vPmrAchValue');
-    const postTrainingScoreValue = document.getElementById('postTrainingScoreValue');
-    const eliteValue = document.getElementById('eliteValue');
-    // Contextual Summary Elements
-    const percentQuarterlyTerritoryTargetP = document.getElementById('percentQuarterlyTerritoryTargetP');
-    const territoryRevPercentP = document.getElementById('territoryRevPercentP');
-    const districtRevPercentP = document.getElementById('districtRevPercentP');
-    const regionRevPercentP = document.getElementById('regionRevPercentP');
-    const percentQuarterlyTerritoryTargetValue = document.getElementById('percentQuarterlyTerritoryTargetValue');
-    const territoryRevPercentValue = document.getElementById('territoryRevPercentValue');
-    const districtRevPercentValue = document.getElementById('districtRevPercentValue');
-    const regionRevPercentValue = document.getElementById('regionRevPercentValue');
+/* --- Upload Instructions Style --- */
+.upload-instructions { text-align: center; color: var(--text-secondary-color); margin-top: 0.5rem; margin-bottom: 1.5rem; padding: 0 10px; }
 
-    // Table Elements
-    const attachRateTableBody = document.getElementById('attachRateTableBody');
-    const attachRateTableFooter = document.getElementById('attachRateTableFooter');
-    const attachTableStatus = document.getElementById('attachTableStatus');
-    const attachRateTable = document.getElementById('attachRateTable');
-    const exportCsvButton = document.getElementById('exportCsvButton');
+/* --- Card Styling --- */
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--card-border-color);
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 3px var(--card-shadow-color);
+    padding: 1rem;
+    margin: 1rem auto;
+    width: auto;
+    margin-left: 10px;
+    margin-right: 10px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
 
-    // Chart Elements
-    const mainChartCanvas = document.getElementById('mainChartCanvas').getContext('2d');
+/* --- Input Area & Loading Indicator --- */
+.input-area { text-align: center; max-width: 600px; }
+.input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: var(--text-secondary-color); }
+#excelFile { border: 1px solid var(--input-border-color); padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; background-color: var(--input-bg-color); color: var(--input-text-color); }
+#excelFile::file-selector-button { padding: 0.5rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); cursor: pointer; margin-right: 0.5rem; }
+#status { margin-top: 0.5rem; margin-bottom: 0; font-style: italic; color: var(--text-secondary-color); text-align: center; min-height: 1.5em; padding: 0 10px; }
+#loadingIndicator, #filterLoadingIndicator { color: var(--text-link-color); margin-top: 0.75rem; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.spinner { border: 4px solid var(--spinner-track-color); border-radius: 50%; border-top: 4px solid var(--spinner-color); width: 20px; height: 20px; animation: spin 1s linear infinite; }
+.spinner-small { border: 3px solid var(--spinner-track-color); border-radius: 50%; border-top: 3px solid var(--spinner-color); width: 16px; height: 16px; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    // Store Details Elements
-    const storeDetailsSection = document.getElementById('storeDetailsSection');
-    const storeDetailsContent = document.getElementById('storeDetailsContent');
-    const closeStoreDetailsButton = document.getElementById('closeStoreDetailsButton');
+/* --- Filter Controls --- */
+#filterArea { max-width: 1200px; }
+.filter-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
+.filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
+.filter-group label, .flags-label { font-weight: 600; color: var(--text-secondary-color); margin-bottom: 0; width: auto; text-align: left; font-size: 0.95em; }
+.filter-group select, .filter-group input[type="text"] { padding: 0.6rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; min-width: 0; width: 100%; background-color: var(--input-bg-color); color: var(--input-text-color); font-size: 0.9rem; }
+.filter-group select[multiple] { padding: 0.5rem; height: auto; min-height: 100px; font-size: 0.85rem; }
+.filter-group select:disabled, .filter-group input:disabled, .filter-group button:disabled, .filter-group-flags input:disabled { background-color: var(--input-disabled-bg-color) !important; cursor: not-allowed !important; color: var(--input-disabled-text-color) !important; border-color: var(--input-border-color) !important; opacity: 0.6; }
+.filter-group select option { background-color: var(--input-bg-color); color: var(--input-text-color); }
+.multi-select-info { font-size: 0.75em; color: var(--text-secondary-color); margin-top: -2px; margin-bottom: 2px; display: block; text-align: left; }
+.multi-select-controls { display: flex; gap: 0.5rem; margin-bottom: 0.3rem; }
+.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border: 1px solid var(--input-border-color); border-radius: 3px; cursor: pointer; }
+.select-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg-color); }
+#storeSearch { margin-bottom: 0.3rem; }
+.filter-group-store { grid-column: span 2; /* Make store filter wider if needed */ }
 
-    // Share Elements
-    const emailRecipientInput = document.getElementById('emailRecipient');
-    const shareEmailButton = document.getElementById('shareEmailButton');
-    const shareStatus = document.getElementById('shareStatus');
-
-    // --- Global State ---
-    let rawData = [];
-    let filteredData = [];
-    let mainChartInstance = null;
-    let storeOptions = [];
-    let allPossibleStores = [];
-    let currentSort = { column: 'Store', ascending: true };
-    let selectedStoreRow = null;
-    let currentTheme = localStorage.getItem(THEME_KEY) || 'dark'; // Default to dark
-
-    // --- Helper Functions ---
-    const formatCurrency = (value) => isNaN(value) ? 'N/A' : CURRENCY_FORMAT.format(value);
-    const formatPercent = (value) => isNaN(value) ? 'N/A' : PERCENT_FORMAT.format(value);
-    const formatNumber = (value) => isNaN(value) ? 'N/A' : NUMBER_FORMAT.format(value);
-
-    const parseNumber = (value) => { /* ... [implementation unchanged] ... */ };
-    const parsePercent = (value) => { /* ... [implementation unchanged] ... */ };
-    const safeGet = (obj, path, defaultValue = 'N/A') => { /* ... [implementation unchanged] ... */ };
-    const isValidForAverage = (value) => { /* ... [implementation unchanged] ... */ };
-    const getUniqueValues = (data, column) => { /* ... [implementation unchanged] ... */ };
-    const setOptions = (selectElement, options, disable = false) => { /* ... [implementation unchanged] ... */ };
-    const setMultiSelectOptions = (selectElement, options, disable = false) => { /* ... [implementation unchanged] ... */ };
-    const showLoading = (isLoading, isFiltering = false) => { /* ... [implementation unchanged] ... */ };
-
-    // --- Theme Handling ---
-    const applyTheme = (theme) => {
-        if (theme === 'light') {
-            bodyElement.classList.add('light-mode');
-            bodyElement.classList.remove('dark-mode');
-            themeToggleButton.textContent = '🌙'; // Moon for switching to dark
-            themeToggleButton.title = 'Switch to Dark Mode';
-        } else {
-            bodyElement.classList.add('dark-mode');
-            bodyElement.classList.remove('light-mode');
-            themeToggleButton.textContent = '☀️'; // Sun for switching to light
-            themeToggleButton.title = 'Switch to Light Mode';
-        }
-        currentTheme = theme; // Update global state
-        localStorage.setItem(THEME_KEY, theme); // Save preference
-
-        // Update chart if it exists
-        if (mainChartInstance) {
-            updateChartTheme(mainChartInstance);
-            mainChartInstance.update(); // Redraw chart with new colors
-        }
-    };
-
-    const toggleTheme = () => {
-        const newTheme = bodyElement.classList.contains('light-mode') ? 'dark' : 'light';
-        applyTheme(newTheme);
-    };
-
-    const updateChartTheme = (chart) => {
-        const isDarkMode = currentTheme === 'dark';
-        const gridColor = isDarkMode ? 'rgba(224, 224, 224, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-        const tickColor = isDarkMode ? '#e0e0e0' : '#666';
-        const labelColor = isDarkMode ? '#e0e0e0' : '#333';
-
-        // Update options dynamically
-        if (chart && chart.options && chart.options.scales) {
-            if (chart.options.scales.y) {
-                chart.options.scales.y.grid = chart.options.scales.y.grid || {};
-                chart.options.scales.y.grid.color = gridColor;
-                chart.options.scales.y.ticks = chart.options.scales.y.ticks || {};
-                chart.options.scales.y.ticks.color = tickColor;
-            }
-            if (chart.options.scales.x) {
-                 chart.options.scales.x.grid = chart.options.scales.x.grid || {};
-                 chart.options.scales.x.grid.color = gridColor; // Can set display: false if needed
-                chart.options.scales.x.ticks = chart.options.scales.x.ticks || {};
-                chart.options.scales.x.ticks.color = tickColor;
-            }
-        }
-         if (chart && chart.options && chart.options.plugins && chart.options.plugins.legend) {
-             chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
-             chart.options.plugins.legend.labels.color = labelColor;
-         }
-          // Tooltip colors are often handled by Chart.js defaults or might need specific styling if customized heavily
-    };
-
-
-    // --- Core Functions ---
-    const handleFile = async (event) => { /* ... [implementation unchanged] ... */ };
-    const populateFilters = (data) => { /* ... [implementation unchanged] ... */ };
-    const addDependencyFilterListeners = () => { /* ... [implementation unchanged] ... */ };
-    const updateStoreFilterOptionsBasedOnHierarchy = () => { /* ... [implementation unchanged] ... */ };
-    const setStoreFilterOptions = (optionsToShow, disable = true) => { /* ... [implementation unchanged] ... */ };
-    const filterStoreOptions = () => { /* ... [implementation unchanged] ... */ };
-    const applyFilters = () => { /* ... [implementation unchanged] ... */ };
-    const resetFilters = () => { /* ... [implementation unchanged] ... */ };
-    const resetUI = () => { /* ... [implementation unchanged] ... */ };
-    const updateSummary = (data) => { /* ... [implementation unchanged] ... */ };
-    const updateContextualSummary = (data) => { /* ... [implementation unchanged] ... */ };
-
-    // ** UPDATED ** Chart Update Function
-    const updateCharts = (data) => {
-        if (mainChartInstance) {
-            mainChartInstance.destroy();
-            mainChartInstance = null;
-        }
-
-        if (data.length === 0 || !mainChartCanvas) return;
-
-        // Sort data and prepare chart datasets (unchanged)
-        const sortedData = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', 0)) - parseNumber(safeGet(a, 'Revenue w/DF', 0)));
-        const chartData = sortedData.slice(0, TOP_N_CHART);
-        const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown'));
-        const revenueDataSet = chartData.map(row => parseNumber(safeGet(row, 'Revenue w/DF', 0)));
-        const targetDataSet = chartData.map(row => parseNumber(safeGet(row, 'QTD Revenue Target', 0)));
-        const backgroundColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)');
-        const borderColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)');
-
-        // Determine theme-specific colors
-        const isDarkMode = currentTheme === 'dark';
-        const gridColor = isDarkMode ? 'rgba(224, 224, 224, 0.2)' : 'rgba(0, 0, 0, 0.1)';
-        const tickColor = isDarkMode ? '#e0e0e0' : '#666';
-        const labelColor = isDarkMode ? '#e0e0e0' : '#333';
-
-        mainChartInstance = new Chart(mainChartCanvas, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Total Revenue (incl. DF)', data: revenueDataSet, backgroundColor: backgroundColors, borderColor: borderColors, borderWidth: 1 },
-                    { label: 'QTD Revenue Target', data: targetDataSet, type: 'line', borderColor: 'rgba(255, 206, 86, 1)', backgroundColor: 'rgba(255, 206, 86, 0.2)', fill: false, tension: 0.1, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: tickColor, callback: (value) => formatCurrency(value) }, // Use theme color
-                        grid: { color: gridColor } // Use theme color
-                    },
-                    x: {
-                        ticks: { color: tickColor }, // Use theme color
-                        grid: { display: false } // Keep grid off for x-axis
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: labelColor } }, // Use theme color
-                    tooltip: {
-                         // You might need to adjust tooltip colors explicitly if default doesn't adapt well
-                         // titleColor: '...', bodyColor: '...', etc.
-                         callbacks: {
-                             label: function(context) { /* ... [unchanged tooltip label logic] ... */ }
-                         }
-                    }
-                },
-                onClick: (event, elements) => { /* ... [unchanged click logic] ... */ }
-            }
-        });
-    };
+/* --- Flag Filters --- */
+.filter-group-flags { grid-column: 1 / -1; /* Span full width */ margin-top: 0.5rem; }
+.flags-label { margin-bottom: 0.5rem; display: block; }
+.flag-toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; background-color: rgba(0,0,0,0.03); /* Slightly different bg */ padding: 0.75rem; border-radius: 4px; border: 1px solid var(--input-border-color); }
+.flag-toggles label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9em; color: var(--text-color); cursor: pointer; }
+.flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--button-bg-color); cursor: pointer; margin: 0; }
+.flag-toggles label:has(input:disabled) { cursor: not-allowed; color: var(--input-disabled-text-color); }
 
 
-    const updateAttachRateTable = (data) => { /* ... [implementation unchanged from previous step] ... */ };
-    const handleSort = (event) => { /* ... [implementation unchanged] ... */ };
-    const updateSortArrows = () => { /* ... [implementation unchanged] ... */ };
-    const showStoreDetails = (storeData) => { /* ... [implementation unchanged] ... */ };
-    const hideStoreDetails = () => { /* ... [implementation unchanged] ... */ };
-    const highlightTableRow = (storeName) => { /* ... [implementation unchanged] ... */ };
-    const exportData = () => { /* ... [implementation unchanged] ... */ };
-    const generateEmailBody = () => { /* ... [implementation unchanged] ... */ };
-    const getFilterSummary = () => { /* ... [implementation unchanged] ... */ };
-    const handleShareEmail = () => { /* ... [implementation unchanged] ... */ };
-    const selectAllOptions = (selectElement) => { /* ... [implementation unchanged] ... */ };
-    const deselectAllOptions = (selectElement) => { /* ... [implementation unchanged] ... */ };
+.apply-filters-button {
+    display: block; width: 100%; max-width: 250px; margin: 1rem auto 0 auto; padding: 0.7rem 1rem;
+    background-color: var(--button-bg-color); color: var(--button-text-color);
+    border: none; border-radius: 0.25rem; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.2s ease;
+}
+.apply-filters-button:hover:not(:disabled) { background-color: var(--button-hover-bg-color); }
 
-    // --- Event Listeners ---
-    excelFileInput?.addEventListener('change', handleFile);
-    applyFiltersButton?.addEventListener('click', applyFilters);
-    storeSearch?.addEventListener('input', filterStoreOptions);
-    exportCsvButton?.addEventListener('click', exportData);
-    shareEmailButton?.addEventListener('click', handleShareEmail);
-    closeStoreDetailsButton?.addEventListener('click', hideStoreDetails);
-    territorySelectAll?.addEventListener('click', () => { selectAllOptions(territoryFilter); updateStoreFilterOptionsBasedOnHierarchy(); });
-    territoryDeselectAll?.addEventListener('click', () => { deselectAllOptions(territoryFilter); updateStoreFilterOptionsBasedOnHierarchy(); });
-    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilter));
-    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilter));
-    attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
-    themeToggleButton?.addEventListener('click', toggleTheme); // ** NEW ** Theme toggle listener
+/* --- Results Area --- */
+.results-container { margin-top: 1.5rem; }
 
-    // --- Initial Setup ---
-    resetUI(); // Ensure clean state on load
-    applyTheme(currentTheme); // Apply saved or default theme on load
+/* --- Store Details Container --- */
+.store-details-container { max-width: 95%; position: relative; } /* Allow more width */
+#storeDetailsContent { font-size: 0.9rem; text-align: left; color: var(--text-color); line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; }
+#storeDetailsContent p { margin-bottom: 0.5rem; }
+#storeDetailsContent strong { color: var(--text-color); font-weight: 600; margin-right: 5px; }
+#storeDetailsContent hr { border: none; border-top: 1px solid var(--card-border-color); margin: 0.75rem 0; }
+#storeDetailsContent span[data-flag="true"] { color: #28a745; font-weight: bold; } /* Green for true */
+#storeDetailsContent span[data-flag="false"] { color: var(--text-secondary-color); } /* Secondary text color for false */
+.close-button {
+    position: absolute; top: 10px; right: 10px; background: var(--button-secondary-bg-color); color: var(--button-secondary-text-color);
+    border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 22px; text-align: center; cursor: pointer; font-weight: bold;
+}
+.close-button:hover { background: var(--button-secondary-hover-bg-color); }
 
-}); // End DOMContentLoaded
+/* --- Summary & Stat Containers --- */
+.summary-container, .rep-pmr-container, .training-stats-container { max-width: 100%; }
+.summary-container { margin-top: 1rem; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.6rem 1.5rem; text-align: left; padding-left: 0; }
+.summary-grid p { margin: 0; font-size: 0.95rem; color: var(--text-color); }
+.summary-grid p strong { font-weight: 600; color: var(--text-color); margin-left: 5px; }
+.summary-grid p[style*="display: none"] { display: none !important; }
 
-// --- Helper Functions Implementation (Copied from previous version - Assuming no changes needed) ---
-const parseNumber = (value) => { if (value === null || value === undefined || value === '') return NaN; if (typeof value === 'number') return value; if (typeof value === 'string') { value = value.replace(/[$,%]/g, ''); const num = parseFloat(value); return isNaN(num) ? NaN : num; } return NaN; };
-const parsePercent = (value) => { if (value === null || value === undefined || value === '') return NaN; if (typeof value === 'number') return value; if (typeof value === 'string') { const num = parseFloat(value.replace('%', '')); return isNaN(num) ? NaN : num / 100; } return NaN; };
-const safeGet = (obj, path, defaultValue = 'N/A') => { const value = obj ? obj[path] : undefined; return (value !== undefined && value !== null) ? value : defaultValue; };
-const isValidForAverage = (value) => { if (value === null || value === undefined || value === '') return false; return !isNaN(parseNumber(String(value).replace('%',''))); };
-const getUniqueValues = (data, column) => { const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => val !== '')); return ['ALL', ...Array.from(values).sort()]; };
-const setOptions = (selectElement, options, disable = false) => { selectElement.innerHTML = ''; options.forEach(optionValue => { const option = document.createElement('option'); option.value = optionValue; option.textContent = optionValue === 'ALL' ? `-- ${optionValue} --` : optionValue; option.title = optionValue; selectElement.appendChild(option); }); selectElement.disabled = disable; };
-const setMultiSelectOptions = (selectElement, options, disable = false) => { selectElement.innerHTML = ''; options.forEach(optionValue => { if (optionValue === 'ALL') return; const option = document.createElement('option'); option.value = optionValue; option.textContent = optionValue; option.title = optionValue; selectElement.appendChild(option); }); selectElement.disabled = disable; };
-const showLoading = (isLoading, isFiltering = false) => { const loadingIndicator = document.getElementById('loadingIndicator'); const filterLoadingIndicator = document.getElementById('filterLoadingIndicator'); const applyFiltersButton = document.getElementById('applyFiltersButton'); const excelFileInput = document.getElementById('excelFile'); if (isFiltering) { if (filterLoadingIndicator) filterLoadingIndicator.style.display = isLoading ? 'flex' : 'none'; if (applyFiltersButton) applyFiltersButton.disabled = isLoading; } else { if (loadingIndicator) loadingIndicator.style.display = isLoading ? 'flex' : 'none'; if (excelFileInput) excelFileInput.disabled = isLoading; } };
+/* --- Top 5 / Bottom 5 Container --- */
+.top-bottom-container {
+    display: flex; /* Use flexbox for side-by-side layout */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 1rem; /* Space between the two cards */
+    margin-top: 1rem;
+}
+.top5-card, .bottom5-card {
+    flex: 1 1 400px; /* Allow flex grow/shrink, base width 400px */
+    max-width: 100%; /* Allow card to take full width if wrapping */
+    margin: 0; /* Reset default card margin */
+}
+.top5-card h3, .bottom5-card h3 {
+    font-size: 1.1rem; /* Slightly smaller heading */
+    margin-bottom: 0.75rem;
+}
+/* Style tables within Top/Bottom cards similar to Attach Rate table */
+#top5Table, #bottom5Table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+    font-size: 0.85rem;
+}
+#top5Table th, #top5Table td,
+#bottom5Table th, #bottom5Table td {
+    border: 1px solid var(--table-border-color);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--text-color);
+}
+#top5Table th, #bottom5Table th {
+    background-color: var(--table-header-bg-color);
+    font-weight: 600;
+    color: var(--table-header-text-color);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+#top5Table tbody tr, #bottom5Table tbody tr {
+    background-color: var(--card-bg-color); /* Use card bg for consistency */
+    cursor: pointer; /* Add cursor pointer */
+    transition: background-color 0.15s ease;
+}
+#top5Table tbody tr:hover, #bottom5Table tbody tr:hover {
+    background-color: var(--table-row-hover-bg-color);
+}
+#top5Table tbody tr.selected-row, #bottom5Table tbody tr.selected-row {
+    background-color: var(--table-row-selected-bg-color) !important; /* Highlight selected row */
+    color: var(--table-row-selected-text-color);
+}
+/* Right-align numerical columns */
+#top5Table td:not(:first-child),
+#bottom5Table td:not(:first-child) {
+    text-align: right;
+}
+
+
+.stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.rep-pmr-container, .training-stats-container {
+    flex: 1 1 300px; max-width: none; margin: 0; /* Reset */
+}
+.rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: var(--text-color); }
+.rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
+.rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: var(--text-color); }
+
+/* --- Chart Container --- */
+.chart-container { height: 350px; max-width: 95%; background-color: var(--card-bg-color); }
+#mainChartCanvas, #secondaryChartCanvas { width: 100% !important; height: 100% !important; }
+
+/* --- Table Container & Table --- */
+.table-container { max-width: 95%; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px; }
+.table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; }
+.export-button { padding: 0.4rem 0.8rem; background-color: var(--button-secondary-bg-color); color: var(--button-secondary-text-color); border: 1px solid var(--input-border-color); border-radius: 4px; font-size: 0.85em; cursor: pointer; }
+.export-button:hover:not(:disabled) { background-color: var(--button-secondary-hover-bg-color); }
+.table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+#attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
+#attachRateTable th, #attachRateTable td { border: 1px solid var(--table-border-color); padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: var(--text-color); }
+#attachRateTable th { background-color: var(--table-header-bg-color); font-weight: 600; color: var(--table-header-text-color); position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
+#attachRateTable th:hover { background-color: rgba(0,0,0,0.075); } /* Subtle hover for light mode header */
+body.dark-mode #attachRateTable th:hover { background-color: #4a4a4a; } /* Dark mode hover */
+#attachRateTable tbody tr { background-color: var(--card-bg-color); cursor: pointer; transition: background-color 0.15s ease; }
+#attachRateTable tbody tr:hover { background-color: var(--table-row-hover-bg-color); }
+#attachRateTable tbody tr.selected-row { background-color: var(--table-row-selected-bg-color) !important; color: var(--table-row-selected-text-color); }
+#attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical, except % target */
+#attachRateTable tfoot tr { background-color: var(--table-footer-bg-color); font-weight: bold; color: var(--table-footer-text-color); }
+#attachRateTable tfoot td { border-top: 2px solid var(--table-border-color); text-align: right; } /* Ensure footer cells are right-aligned */
+#attachRateTable tfoot td:first-child { text-align: right; } /* Ensure first footer cell is right-aligned */
+
+.highlight-green { background-color: var(--highlight-green-bg) !important; color: var(--highlight-green-text); }
+.highlight-red { background-color: var(--highlight-red-bg) !important; color: var(--highlight-red-text); }
+.sort-arrow { display: inline-block; width: 12px; height: 12px; margin-left: 5px; opacity: 0.7; vertical-align: middle; }
+.sort-arrow.asc::after { content: ' ▲'; font-size: 0.8em; }
+.sort-arrow.desc::after { content: ' ▼'; font-size: 0.8em; }
+#attachTableStatus { margin-top: 0.75rem; color: var(--text-secondary-color); font-size: 0.85rem; text-align: center; }
+
+/* --- Share Section --- */
+.share-container { max-width: 600px; }
+.share-controls { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+.share-controls label { font-weight: 600; color: var(--text-secondary-color); margin-bottom: 0.25rem; }
+.share-controls input[type="email"] { padding: 0.6rem 0.75rem; border: 1px solid var(--input-border-color); border-radius: 0.25rem; flex-grow: 1; background-color: var(--input-bg-color); color: var(--input-text-color); }
+.share-controls button { padding: 0.6rem 1rem; background-color: var(--button-bg-color); color: var(--button-text-color); border: none; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+.share-controls button:hover { background-color: var(--button-hover-bg-color); }
+.share-status { margin-top: 0.5rem; font-style: italic; color: var(--text-link-color); min-height: 1.2em; }
+.share-note { font-size: 0.85rem; color: var(--text-secondary-color); margin-top: 1rem; text-align: center; }
+
+/* --- MEDIA QUERIES --- */
+@media (min-width: 768px) { /* Adjusted breakpoint */
+    .container { padding: 15px; }
+    .input-area label { display: inline-block; margin-bottom: 0; }
+    #excelFile { width: auto; max-width: 350px; }
+    .summary-grid p { font-size: 1rem; }
+    .rep-pmr-container p, .training-stats-container p { font-size: 1rem; }
+    .chart-container { height: 400px; }
+    #attachRateTable, #top5Table, #bottom5Table { font-size: 0.9rem; } /* Apply to new tables */
+    #attachRateTable th, #attachRateTable td,
+    #top5Table th, #top5Table td,
+    #bottom5Table th, #bottom5Table td { padding: 0.6rem 0.8rem; } /* Slightly adjust padding */
+    #attachRateTable th, #top5Table th, #bottom5Table th { font-size: 0.85rem; }
+    .share-controls { flex-direction: row; align-items: center; }
+    .share-controls label { margin-bottom: 0; }
+    .filter-group-store { grid-column: span 1; /* Reset span */ }
+}
+
+@media (min-width: 1200px) { /* Adjusted breakpoint */
+    h1 { font-size: 2rem; margin-bottom: 1rem; } /* Reduced bottom margin */
+    .page-header { margin-bottom: 2rem; } /* Increased header bottom margin */
+    h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+    .card { padding: 1.5rem; margin: 1.5rem auto; }
+    .filter-controls { gap: 1.2rem 2rem; }
+    .chart-container { height: 450px; }
+    #attachRateTable, #top5Table, #bottom5Table { font-size: 0.9rem; }
+    #attachRateTable th, #top5Table th, #bottom5Table th { font-size: 0.9rem; }
+    #attachRateTable th, #attachRateTable td,
+    #top5Table th, #top5Table td,
+    #bottom5Table th, #bottom5Table td { padding: 0.75rem 1rem; }
+    .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
+    .top-bottom-container { flex-wrap: nowrap; /* Prevent wrapping on large screens */ }
+}
+
