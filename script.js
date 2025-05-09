@@ -1,6 +1,6 @@
 //
-//    Timestamp: 2025-05-08T22:17:56EDT
-//    Summary: Modified 'Rev AR%' calculation in updateSummary to be sum of 'Revenue w/DF' / sum of 'QTD Revenue Target'.
+//    Timestamp: 2025-05-08T22:35:56EDT
+//    Summary: Updated the tooltip for the 'Rev AR%' summary metric as requested.
 //
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading(true);
         if (filterArea) filterArea.style.display = 'none';
         if (resultsArea) resultsArea.style.display = 'none';
-        resetUI(); // Full reset before loading new file data
+        resetUI(); 
 
         try {
             const data = await file.arrayBuffer();
@@ -245,9 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error processing file:', error);
             if (statusDiv) statusDiv.textContent = `Error: ${error.message}`;
             rawData = [];
-            allPossibleStores = []; // Ensure cleared on error
+            allPossibleStores = [];
             filteredData = [];
-            resetUI(); // Call resetUI again to ensure clean state after error
+            resetUI();
         } finally {
             showLoading(false);
             if (excelFileInput) excelFileInput.value = '';
@@ -466,25 +466,24 @@ document.addEventListener('DOMContentLoaded', () => {
          const allOptionHTML = '<option value="ALL">-- Load File First --</option>';
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
              if (sel) { 
-                sel.innerHTML = allOptionHTML; // Reset options first
+                sel.innerHTML = allOptionHTML;
                 sel.value = 'ALL'; 
                 sel.disabled = true;
             }
          });
          if (territoryFilter) { 
-            territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; // Reset options
+            territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
             territoryFilter.selectedIndex = -1; 
             territoryFilter.disabled = true; 
         }
          if (storeFilter) {
-             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; // Reset options
+             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
              storeFilter.selectedIndex = -1;
              storeFilter.disabled = true;
          }
          if (storeSearch) { storeSearch.value = ''; storeSearch.disabled = true; }
          
-         storeOptions = []; 
-         // allPossibleStores is cleared in resetUI, which is called before new file load.
+         storeOptions = [];
 
          Object.values(flagFiltersCheckboxes).forEach(input => { if(input) {input.checked = false; input.disabled = true;} });
 
@@ -515,9 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
          hideStoreDetails();
          updateSummary([]); 
          if(statusDiv) statusDiv.textContent = 'No file selected.';
-         allPossibleStores = []; // Clear all stores when UI is fully reset
-         rawData = []; // Clear raw data
-         filteredData = []; // Clear filtered data
+         allPossibleStores = [];
+         rawData = [];
+         filteredData = [];
      };
 
     const updateSummary = (data) => {
@@ -541,7 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const sumVisits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Visit count', 0)), 0);
         const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
 
-        // Variables for other averages (excluding Rev AR%)
         let sumConnectivity = 0, countConnectivity = 0;
         let sumRepSkill = 0, countRepSkill = 0;
         let sumPmr = 0, countPmr = 0;
@@ -549,28 +547,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let sumElite = 0, countElite = 0;
 
         data.forEach(row => {
-            let valStr; // Use a consistent variable name for the string value from safeGet
-            // Retail Mode Connectivity
+            let valStr;
             valStr = safeGet(row, 'Retail Mode Connectivity', null); 
             if (isValidForAverage(valStr)) { sumConnectivity += parsePercent(valStr); countConnectivity++; }
-            // Rep Skill Ach
             valStr = safeGet(row, 'Rep Skill Ach', null); 
             if (isValidForAverage(valStr)) { sumRepSkill += parsePercent(valStr); countRepSkill++; }
-            // (V)PMR Ach
             valStr = safeGet(row, '(V)PMR Ach', null); 
             if (isValidForAverage(valStr)) { sumPmr += parsePercent(valStr); countPmr++; }
-            // Post Training Score
             valStr = safeGet(row, 'Post Training Score', null); 
             if (isValidForAverage(valStr)) { sumPostTraining += parseNumber(valStr); countPostTraining++; }
-            // Elite
             valStr = safeGet(row, 'Elite', null); 
             if (isValidForAverage(valStr)) { sumElite += parsePercent(valStr); countElite++; }
         });
 
-        // NEW CALCULATION for Rev AR% based on sums
         const calculatedRevAR = sumQtdTarget === 0 ? NaN : sumRevenue / sumQtdTarget;
 
-        // Calculate other averages
         const avgConnectivity = countConnectivity > 0 ? sumConnectivity / countConnectivity : NaN;
         const avgRepSkill = countRepSkill > 0 ? sumRepSkill / countRepSkill : NaN;
         const avgPmr = countPmr > 0 ? sumPmr / countPmr : NaN;
@@ -580,7 +571,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const overallPercentStoreTarget = sumQuarterlyTarget !== 0 ? sumRevenue / sumQuarterlyTarget : NaN;
         const overallUnitAchievement = sumUnitTarget !== 0 ? sumUnits / sumUnitTarget : NaN;
 
-        // Update DOM Elements for sums
         if (revenueWithDFValue) { revenueWithDFValue.textContent = formatCurrency(sumRevenue); revenueWithDFValue.title = `Sum of 'Revenue w/DF' for ${totalCount} filtered stores`; }
         if (qtdRevenueTargetValue) { qtdRevenueTargetValue.textContent = formatCurrency(sumQtdTarget); qtdRevenueTargetValue.title = `Sum of 'QTD Revenue Target' for ${totalCount} filtered stores`; }
         if (qtdGapValue) { qtdGapValue.textContent = formatCurrency(sumRevenue - sumQtdTarget); qtdGapValue.title = `Calculated Gap (Total Revenue - QTD Target) for ${totalCount} filtered stores`; }
@@ -590,13 +580,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (visitCountValue) { visitCountValue.textContent = formatNumber(sumVisits); visitCountValue.title = `Sum of 'Visit count' for ${totalCount} filtered stores`; }
         if (trainingCountValue) { trainingCountValue.textContent = formatNumber(sumTrainings); trainingCountValue.title = `Sum of 'Trainings' for ${totalCount} filtered stores`; }
 
-        // Update DOM Element for NEW Rev AR%
         if (revARValue) { 
             revARValue.textContent = formatPercent(calculatedRevAR);
-            revARValue.title = `Overall Rev AR% (Total 'Revenue w/DF' / Total 'QTD Revenue Target')`;
+            // Updated title as per Senpai's request
+            revARValue.title = "Rev AR% for selected stores with data"; 
         }
 
-        // Update DOM Elements for other overall percentages and averages
         if (percentQuarterlyStoreTargetValue) { percentQuarterlyStoreTargetValue.textContent = formatPercent(overallPercentStoreTarget); percentQuarterlyStoreTargetValue.title = `Overall % Quarterly Target (Total Revenue / Total Quarterly Target)`; }
         if (unitAchievementValue) { unitAchievementValue.textContent = formatPercent(overallUnitAchievement); unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`; }
         
@@ -812,14 +801,12 @@ document.addEventListener('DOMContentLoaded', () => {
                      const td = document.createElement('td');
                      const rawValue = safeGet(row, col.key, null);
                      const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('% Target');
-                     // For numericValue, ensure 'Store' remains a string, others are parsed.
                      const numericValue = (col.key === 'Store') ? rawValue : (isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue));
 
                      let formattedValue;
                      if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue)) || String(rawValue).trim() === '') {
                          formattedValue = 'N/A';
                      } else {
-                         // Use col.format if it exists (for percentages), otherwise use the numericValue (which could be a string for 'Store')
                          formattedValue = typeof col.format === 'function' ? col.format(numericValue) : numericValue;
                      }
                      td.textContent = formattedValue;
@@ -876,13 +863,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!attachRateTable) return;
         attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => {
             arrow.className = 'sort-arrow';
-            arrow.textContent = ''; // Clear text if using CSS ::after for arrows
+            arrow.textContent = '';
         });
         const currentHeaderArrow = attachRateTable.querySelector(`th[data-sort="${currentSort.column}"] .sort-arrow`);
         if (currentHeaderArrow) {
             currentHeaderArrow.classList.add(currentSort.ascending ? 'asc' : 'desc');
-            // CSS ::after will add the arrow character. If not using ::after, uncomment below:
-            // currentHeaderArrow.textContent = currentSort.ascending ? ' ▲' : ' ▼';
         }
     };
 
@@ -1016,8 +1001,9 @@ document.addEventListener('DOMContentLoaded', () => {
         body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`;
         body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
         body += `- QTD Gap: ${qtdGapValue?.textContent || 'N/A'}\n`;
-        // Note: The revARValue.textContent will now reflect the new calculation method.
-        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'} (Overall: Total Revenue / Total QTD Target)\n`;
+        // The revARValue.title is set in updateSummary, textContent will show the value.
+        // Adding context to the email body about the Rev AR% calculation here for clarity.
+        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'} (Calculated as: Total Revenue w/DF / Total QTD Revenue Target)\n`;
         body += `- % Store Quarterly Target: ${percentQuarterlyStoreTargetValue?.textContent || 'N/A'}\n`;
         body += `- Total Units (incl. DF): ${unitsWithDFValue?.textContent || 'N/A'}\n`;
         body += `- Unit Achievement %: ${unitAchievementValue?.textContent || 'N/A'}\n`;
