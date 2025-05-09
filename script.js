@@ -1,6 +1,6 @@
 //
-//    Timestamp: 2025-05-09T07:07:10EDT
-//    Summary: Added functionality for "Reset Filters" button, including event listener, handler function, and button state management.
+//    Timestamp: 2025-05-09T07:48:22EDT
+//    Summary: Removed '% Quarterly Revenue Target' from the Attach Rates table display logic (columns array and averageMetrics array).
 //
 document.addEventListener('DOMContentLoaded', () => {
     // --- Theme Constants and Elements ---
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'ORG_STORE_ID', 'CV_STORE_ID', 'CINGLEPOINT_ID', 
         'STORE_TYPE_NAME', 'National_Tier', 'Merchandising_Level', 'Combined_Tier', 
         '%Quarterly Territory Rev Target', 'Region Rev%', 'District Rev%', 'Territory Rev%'
-    ];
+    ]; // '% Quarterly Revenue Target' is still required for other parts of the dashboard
     const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE'];
     const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterArea = document.getElementById('filterArea');
     const resultsArea = document.getElementById('resultsArea');
     const applyFiltersButton = document.getElementById('applyFiltersButton');
-    const resetFiltersButton = document.getElementById('resetFiltersButton'); // ** NEW **
+    const resetFiltersButton = document.getElementById('resetFiltersButton'); 
     const regionFilter = document.getElementById('regionFilter');
     const districtFilter = document.getElementById('districtFilter');
     const territoryFilter = document.getElementById('territoryFilter');
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (storeSelectAll) storeSelectAll.disabled = false; if (storeDeselectAll) storeDeselectAll.disabled = false;
         if (storeSearch) storeSearch.disabled = false; 
         if (applyFiltersButton) applyFiltersButton.disabled = false;
-        if (resetFiltersButton) resetFiltersButton.disabled = false; // ** NEW: Enable reset button **
+        if (resetFiltersButton) resetFiltersButton.disabled = false; 
         addDependencyFilterListeners();
     };
     const addDependencyFilterListeners = () => {
@@ -345,45 +345,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     };
     
-    // This function is for a *full UI reset* (e.g. new file, initial load)
     const resetFiltersForFullUIReset = () => {
          const allOptionHTML = '<option value="ALL">-- Load File First --</option>';
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
-             if (sel) { 
-                sel.innerHTML = allOptionHTML; 
-                sel.value = 'ALL'; 
-                sel.disabled = true;
-            }
+             if (sel) { sel.innerHTML = allOptionHTML; sel.value = 'ALL'; sel.disabled = true;}
          });
-         if (territoryFilter) { 
-            territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
-            territoryFilter.selectedIndex = -1; 
-            territoryFilter.disabled = true; 
-        }
-         if (storeFilter) {
-             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
-             storeFilter.selectedIndex = -1;
-             storeFilter.disabled = true;
-         }
+         if (territoryFilter) { territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; territoryFilter.selectedIndex = -1; territoryFilter.disabled = true; }
+         if (storeFilter) { storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; storeFilter.selectedIndex = -1; storeFilter.disabled = true; }
          if (storeSearch) { storeSearch.value = ''; storeSearch.disabled = true; }
-         
-         storeOptions = []; // This is fine here as allPossibleStores will be repopulated or is empty
-
+         storeOptions = []; 
          Object.values(flagFiltersCheckboxes).forEach(input => { if(input) {input.checked = false; input.disabled = true;} });
-
          if (applyFiltersButton) applyFiltersButton.disabled = true;
-         if (resetFiltersButton) resetFiltersButton.disabled = true; // ** Ensure reset button is disabled too **
+         if (resetFiltersButton) resetFiltersButton.disabled = true; 
          if (territorySelectAll) territorySelectAll.disabled = true; if (territoryDeselectAll) territoryDeselectAll.disabled = true;
          if (storeSelectAll) storeSelectAll.disabled = true; if (storeDeselectAll) storeDeselectAll.disabled = true;
          if (exportCsvButton) exportCsvButton.disabled = true;
-
          const handler = updateStoreFilterOptionsBasedOnHierarchy;
          [regionFilter, districtFilter, territoryFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(filter => { if (filter) filter.removeEventListener('change', handler); });
          Object.values(flagFiltersCheckboxes).forEach(input => { if (input) input.removeEventListener('change', handler); });
     };
 
      const resetUI = () => {
-         resetFiltersForFullUIReset(); // Use the more specific reset for full UI reset
+         resetFiltersForFullUIReset(); 
          if (filterArea) filterArea.style.display = 'none'; 
          if (resultsArea) resultsArea.style.display = 'none';
          if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
@@ -401,45 +384,35 @@ document.addEventListener('DOMContentLoaded', () => {
          filteredData = [];
      };
 
-    // ** NEW Function for the Reset Filters Button Click **
     const handleResetFiltersClick = () => {
-        // 1. Reset filter control values to defaults
         [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
             if (sel) sel.value = 'ALL'; 
         });
         if (territoryFilter) territoryFilter.selectedIndex = -1;
-        if (storeFilter) storeFilter.selectedIndex = -1; // Deselect any selected stores
-        if (storeSearch) storeSearch.value = ''; // Clear search
+        if (storeFilter) storeFilter.selectedIndex = -1; 
+        if (storeSearch) storeSearch.value = ''; 
         Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.checked = false; });
 
-        // 2. Update store filter based on reset hierarchy (will show all if rawData exists)
         if (rawData.length > 0) {
-            updateStoreFilterOptionsBasedOnHierarchy(); // This will repopulate storeFilter based on 'ALL' from others
+            updateStoreFilterOptionsBasedOnHierarchy(); 
         } else {
-            // If no rawData, ensure store filter is truly reset like in initial load
-            if (storeFilter) {
-                storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
-                storeFilter.disabled = true;
-            }
+            if (storeFilter) { storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; storeFilter.disabled = true; }
             if (storeSearch) storeSearch.disabled = true;
             if (storeSelectAll) storeSelectAll.disabled = true;
             if (storeDeselectAll) storeDeselectAll.disabled = true;
         }
 
-        // 3. Hide results area and clear visual elements
         if (resultsArea) resultsArea.style.display = 'none';
         if (topBottomSection) topBottomSection.style.display = 'none';
         if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
         if (attachRateTableBody) attachRateTableBody.innerHTML = '';
         if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
         if (attachTableStatus) attachTableStatus.textContent = '';
-        hideStoreDetails(); // Clears details and selected row highlight
+        hideStoreDetails(); 
 
-        // 4. Clear filtered data array & disable export
         filteredData = [];
         if (exportCsvButton) exportCsvButton.disabled = true;
 
-        // 5. Update status message
         if (statusDiv) {
             if (rawData.length > 0) {
                 statusDiv.textContent = 'Filters reset. Click "Apply Filters" to see results.';
@@ -447,12 +420,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 statusDiv.textContent = 'No file selected. Load a file to use filters.';
             }
         }
-        // Note: Apply Filters button remains enabled if a file is loaded, allowing re-application.
     };
 
-
     const updateSummary = (data) => {
-        // ... (This function is from the previous step with Elite Score exclusion)
         const totalCount = data.length;
         const fieldsToClearText = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue, percentQuarterlyStoreTargetValue, revARValue, unitsWithDFValue, unitTargetValue, unitAchievementValue, visitCountValue, trainingCountValue, retailModeConnectivityValue, repSkillAchValue, vPmrAchValue, postTrainingScoreValue, eliteValue, percentQuarterlyTerritoryTargetValue, territoryRevPercentValue, districtRevPercentValue, regionRevPercentValue];
         fieldsToClearText.forEach(el => { if (el) el.textContent = 'N/A'; });
@@ -500,7 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateContextualSummary = (data) => {
-        // ... (This function is from the previous step)
         [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
         if (data.length === 0) return;
         const singleRegion = regionFilter?.value !== 'ALL'; const singleDistrict = districtFilter?.value !== 'ALL'; const singleTerritory = territoryFilter && territoryFilter.selectedOptions.length === 1;
@@ -514,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateCharts = (data) => {
-        // ... (This function is from the previous step, with theme color logic)
         if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
         if (!mainChartCanvas || (data.length === 0 && rawData.length === 0) ) { if (mainChartCanvas && mainChartInstance) { mainChartInstance = new Chart(mainChartCanvas, {type: 'bar', data: {labels:[], datasets:[]}}); mainChartInstance.destroy(); mainChartInstance = null;} return; }
         const chartThemeColors = getChartThemeColors(); 
@@ -532,47 +500,93 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateAttachRateTable = (data) => {
-        // ... (This function is from the previous step)
         if (!attachRateTableBody || !attachRateTableFooter) return;
         attachRateTableBody.innerHTML = ''; attachRateTableFooter.innerHTML = '';
         if (data.length === 0) { if(attachTableStatus) attachTableStatus.textContent = 'No data to display based on filters.'; return; }
+        
         const sortedData = [...data].sort((a, b) => {
              let valA = safeGet(a, currentSort.column, null); let valB = safeGet(b, currentSort.column, null);
              if (valA === null && valB === null) return 0; if (valA === null) return currentSort.ascending ? -1 : 1; if (valB === null) return currentSort.ascending ? 1 : -1;
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('% Target');
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('% Target'); // Keep this for sorting main table
              const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA); const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
              if (!isNaN(numA) && !isNaN(numB)) { return currentSort.ascending ? numA - numB : numB - numA; }
              else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA); }
         });
-        const averageMetrics = [ '% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate' ];
+
+        // ** MODIFIED: Define columns for Attach Rate Table (excluding '% Quarterly Revenue Target') **
+        const columns = [
+            { key: 'Store', format: (val) => val },
+            // '% Quarterly Revenue Target' removed from here
+            { key: 'Tablet Attach Rate', format: formatPercent, highlight: true },
+            { key: 'PC Attach Rate', format: formatPercent, highlight: true },
+            { key: 'NC Attach Rate', format: formatPercent, highlight: true },
+            { key: 'TWS Attach Rate', format: formatPercent, highlight: true },
+            { key: 'WW Attach Rate', format: formatPercent, highlight: true },
+            { key: 'ME Attach Rate', format: formatPercent, highlight: true },
+            { key: 'NCME Attach Rate', format: formatPercent, highlight: true },
+        ];
+        
+        // ** MODIFIED: averageMetrics for footer (excluding '% Quarterly Revenue Target') **
+        const averageMetrics = [
+             // '% Quarterly Revenue Target' removed
+             'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
+             'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
+        ];
         const averages = {};
-        averageMetrics.forEach(key => { let sum = 0, count = 0; data.forEach(row => { const valStr = safeGet(row, key, null); if (isValidForAverage(valStr)) { sum += parsePercent(valStr); count++; } }); averages[key] = count > 0 ? sum / count : NaN; });
+        averageMetrics.forEach(key => { 
+            let sum = 0, count = 0; 
+            data.forEach(row => { 
+                const valStr = safeGet(row, key, null); 
+                if (isValidForAverage(valStr)) { sum += parsePercent(valStr); count++; } 
+            }); 
+            averages[key] = count > 0 ? sum / count : NaN; 
+        });
+
         sortedData.forEach(row => {
             const tr = document.createElement('tr'); const storeName = safeGet(row, 'Store', null);
             if (storeName && String(storeName).trim() !== '') {
                  tr.dataset.storeName = storeName; tr.onclick = () => { showStoreDetails(row); highlightTableRow(storeName); };
-                 const columns = [ { key: 'Store', format: (val) => val }, { key: '% Quarterly Revenue Target', format: formatPercent, highlight: true }, { key: 'Tablet Attach Rate', format: formatPercent, highlight: true }, { key: 'PC Attach Rate', format: formatPercent, highlight: true }, { key: 'NC Attach Rate', format: formatPercent, highlight: true }, { key: 'TWS Attach Rate', format: formatPercent, highlight: true }, { key: 'WW Attach Rate', format: formatPercent, highlight: true }, { key: 'ME Attach Rate', format: formatPercent, highlight: true }, { key: 'NCME Attach Rate', format: formatPercent, highlight: true }, ];
+                 // Use the MODIFIED 'columns' array here
                  columns.forEach(col => {
-                     const td = document.createElement('td'); const rawValue = safeGet(row, col.key, null); const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('% Target');
+                     const td = document.createElement('td'); const rawValue = safeGet(row, col.key, null); 
+                     const isPercentCol = col.key.includes('Attach Rate'); // Simplified as '% Target' is removed
                      const numericValue = (col.key === 'Store') ? rawValue : (isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue));
-                     let formattedValue; if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue)) || String(rawValue).trim() === '') { formattedValue = 'N/A'; } else { formattedValue = typeof col.format === 'function' ? col.format(numericValue) : numericValue; }
+                     let formattedValue; 
+                     if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue)) || String(rawValue).trim() === '') { formattedValue = 'N/A'; } 
+                     else { formattedValue = typeof col.format === 'function' ? col.format(numericValue) : numericValue; }
                      td.textContent = formattedValue; td.title = `${col.key}: ${formattedValue}`;
-                     if (col.highlight && !isNaN(averages[col.key]) && typeof numericValue === 'number' && !isNaN(numericValue)) { td.classList.toggle('highlight-green', numericValue >= averages[col.key]); td.classList.toggle('highlight-red', numericValue < averages[col.key]); }
+                     if (col.highlight && !isNaN(averages[col.key]) && typeof numericValue === 'number' && !isNaN(numericValue)) { 
+                         td.classList.toggle('highlight-green', numericValue >= averages[col.key]); 
+                         td.classList.toggle('highlight-red', numericValue < averages[col.key]); 
+                     }
                      tr.appendChild(td);
-                 }); attachRateTableBody.appendChild(tr);
-             }
+                 }); 
+                 attachRateTableBody.appendChild(tr);
+            }
         });
+
         if (data.length > 0) {
-            const footerRow = attachRateTableFooter.insertRow(); const avgLabelCell = footerRow.insertCell(); avgLabelCell.textContent = 'Filtered Avg*';
-            avgLabelCell.title = 'Average calculated only using stores with valid data for each column'; avgLabelCell.style.textAlign = "right"; avgLabelCell.style.fontWeight = "bold";
-            averageMetrics.forEach(key => { const td = footerRow.insertCell(); const avgValue = averages[key]; td.textContent = formatPercent(avgValue); let validCount = data.filter(r => isValidForAverage(safeGet(r, key, null))).length; td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`; td.style.textAlign = "right"; });
+            const footerRow = attachRateTableFooter.insertRow(); 
+            const avgLabelCell = footerRow.insertCell(); 
+            avgLabelCell.textContent = 'Filtered Avg*';
+            avgLabelCell.title = 'Average calculated only using stores with valid data for each column'; 
+            avgLabelCell.style.textAlign = "right"; 
+            avgLabelCell.style.fontWeight = "bold";
+            // Use the MODIFIED 'averageMetrics' array here
+            averageMetrics.forEach(key => { 
+                const td = footerRow.insertCell(); 
+                const avgValue = averages[key]; 
+                td.textContent = formatPercent(avgValue); 
+                let validCount = data.filter(r => isValidForAverage(safeGet(r, key, null))).length; 
+                td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`; 
+                td.style.textAlign = "right"; 
+            });
         }
         if(attachTableStatus) attachTableStatus.textContent = `Showing ${attachRateTableBody.rows.length} stores. Click row for details. Click headers to sort.`;
         updateSortArrows();
     };
 
     const handleSort = (event) => {
-        // ... (This function is from the previous step)
          const headerCell = event.target.closest('th'); if (!headerCell?.classList.contains('sortable')) return;
          const sortKey = headerCell.dataset.sort; if (!sortKey) return;
          if (currentSort.column === sortKey) { currentSort.ascending = !currentSort.ascending; } else { currentSort.column = sortKey; currentSort.ascending = true; }
@@ -580,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSortArrows = () => {
-        // ... (This function is from the previous step)
         if (!attachRateTable) return;
         attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => { arrow.className = 'sort-arrow'; arrow.textContent = ''; });
         const currentHeaderArrow = attachRateTable.querySelector(`th[data-sort="${CSS.escape(currentSort.column)}"] .sort-arrow`);
@@ -588,7 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showStoreDetails = (storeData) => {
-        // ... (This function is from the previous step)
         if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
         const addressParts = [ safeGet(storeData, 'ADDRESS1', null), safeGet(storeData, 'CITY', null), safeGet(storeData, 'STATE', null), safeGet(storeData, 'ZIPCODE', null) ].filter(part => part && String(part).trim() !== '');
         const addressString = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
@@ -601,14 +613,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const hideStoreDetails = () => {
-        // ... (This function is from the previous step)
         if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
         storeDetailsContent.innerHTML = 'Select a store from the table or chart for details, or apply filters resulting in a single store.';
         storeDetailsSection.style.display = 'none'; closeStoreDetailsButton.style.display = 'none'; highlightTableRow(null);
     };
 
     const highlightTableRow = (storeName) => {
-        // ... (This function is from the previous step)
         if (selectedStoreRow) { selectedStoreRow.classList.remove('selected-row'); selectedStoreRow = null; }
         if (storeName) {
             const tablesToSearch = [attachRateTableBody, top5TableBody, bottom5TableBody];
@@ -622,14 +632,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const exportData = () => {
-        // ... (This function is from the previous step)
         if (filteredData.length === 0) { alert("No filtered data to export."); return; }
         try {
             if (!attachRateTable) throw new Error("Attach rate table not found for headers.");
-            const headers = Array.from(attachRateTable.querySelectorAll('thead th')).map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim());
+            // Get headers from the modified attachRateTable (which no longer has % Qtr Rev Target)
+            const headers = Array.from(attachRateTable.querySelectorAll('thead th'))
+                                 .map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim());
             const dataToExport = filteredData.map(row => {
-                return headers.map(headerKey => {
-                    let value = safeGet(row, headerKey, ''); const isPercentLike = headerKey.includes('%') || headerKey.includes('Rate') || headerKey.includes('Ach') || headerKey.includes('Connectivity') || headerKey.includes('Elite');
+                return headers.map(headerKey => { // This headerKey comes from the current table headers
+                    let value = safeGet(row, headerKey, ''); 
+                    // Note: If headerKey is for a column that was removed (like '% Qtr Rev Target'), 
+                    // it won't be in `headers` anymore, so safeGet will use its default for that key if accessed directly.
+                    // But since we iterate `headers` from the table, this is fine.
+                    const isPercentLike = headerKey.includes('%') || headerKey.includes('Rate') || headerKey.includes('Ach') || headerKey.includes('Connectivity') || headerKey.includes('Elite');
                     if (isPercentLike) { const numVal = parsePercent(value); return isNaN(numVal) ? '' : numVal; } 
                     else { const numVal = parseNumber(value); if (!isNaN(numVal) && typeof value !== 'boolean' && String(value).trim() !== '') { return numVal; } if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) { return `"${value.replace(/"/g, '""')}"`; } return value; }
                 });
@@ -640,7 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateEmailBody = () => {
-        // ... (This function is from the previous step)
         if (filteredData.length === 0) return "No data available based on current filters.";
         let body = "FSM Dashboard Summary:\n---------------------------------\n"; body += `Filters Applied: ${getFilterSummary()}\nStores Found: ${filteredData.length}\n---------------------------------\n\n`;
         body += "Performance Summary:\n"; body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`; body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
@@ -662,7 +676,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const getFilterSummary = () => {
-        // ... (This function is from the previous step)
         let summary = [];
         if (regionFilter?.value !== 'ALL') summary.push(`Region: ${regionFilter.value}`); if (districtFilter?.value !== 'ALL') summary.push(`District: ${districtFilter.value}`);
         const territories = territoryFilter ? Array.from(territoryFilter.selectedOptions).map(o => o.value) : []; if (territories.length > 0) summary.push(`Territories: ${territories.length === 1 ? territories[0] : `${territories.length} selected`}`);
@@ -674,7 +687,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleShareEmail = () => {
-        // ... (This function is from the previous step)
         if (!emailRecipientInput || !shareStatus) return; const recipient = emailRecipientInput.value;
         if (!recipient || !/\S+@\S+\.\S+/.test(recipient)) { shareStatus.textContent = "Please enter a valid recipient email address."; return; }
         try {
@@ -686,20 +698,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      const selectAllOptions = (selectElement) => {
-        // ... (This function is from the previous step)
          if (!selectElement) return; Array.from(selectElement.options).forEach(option => option.selected = true);
          if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
     };
 
      const deselectAllOptions = (selectElement) => {
-        // ... (This function is from the previous step)
          if (!selectElement) return; selectElement.selectedIndex = -1;
          if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
     };
 
     // --- Event Listeners ---
     if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
-    if (resetFiltersButton) resetFiltersButton.addEventListener('click', handleResetFiltersClick); // ** NEW Event Listener **
+    if (resetFiltersButton) resetFiltersButton.addEventListener('click', handleResetFiltersClick); 
     
     excelFileInput?.addEventListener('change', handleFile);
     applyFiltersButton?.addEventListener('click', applyFilters);
@@ -717,7 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY); 
     applyTheme(savedTheme || 'dark'); 
 
-    resetUI(); // This will call resetFiltersForFullUIReset which disables buttons initially
+    resetUI(); 
     if (!mainChartCanvas) console.warn("Main chart canvas context not found on load. Chart will not render.");
 
 }); // End DOMContentLoaded
