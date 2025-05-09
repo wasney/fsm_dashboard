@@ -1,6 +1,6 @@
 /*
-    Timestamp: 2025-05-08T21:15:26EDT
-    Summary: Proofread for consistency and best practices. No major functional changes.
+    Timestamp: 2025-05-08T23:53:22EDT
+    Summary: Added CSS styles for the new Top 5 / Bottom 5 section, including layout for the container and styling for the tables within.
 */
 /* --- Global Resets & Body (Dark Mode) --- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -48,9 +48,9 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 .input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: #c0c0c0; }
 #excelFile { border: 1px solid #555; padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; background-color: #333; color: #e0e0e0; }
 #excelFile::file-selector-button { padding: 0.5rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; background-color: #444; color: #e0e0e0; cursor: pointer; margin-right: 0.5rem; }
-#status.status-message { /* More specific selector for the status paragraph */
-    margin-top: 1rem; /* Increased top margin for better separation */
-    margin-bottom: 1rem; /* Added bottom margin */
+#status.status-message { 
+    margin-top: 1rem; 
+    margin-bottom: 1rem; 
     font-style: italic;
     color: #a0a0a0;
     text-align: center;
@@ -76,16 +76,15 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 .select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 3px; cursor: pointer; }
 .select-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
 #storeSearch { margin-bottom: 0.3rem; }
-.filter-group-store { grid-column: span 2; /* Make store filter wider if needed */ }
+.filter-group-store { grid-column: span 2; }
 
 /* --- Flag Filters --- */
-.filter-group-flags { grid-column: 1 / -1; /* Span full width */ margin-top: 0.5rem; }
+.filter-group-flags { grid-column: 1 / -1; margin-top: 0.5rem; }
 .flags-label { margin-bottom: 0.5rem; display: block; }
 .flag-toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; background-color: #333; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; }
 .flag-toggles label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9em; color: #ccc; cursor: pointer; }
 .flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: #58a6ff; cursor: pointer; margin: 0; }
 .flag-toggles label:has(input:disabled) { cursor: not-allowed; color: #888; }
-
 
 .apply-filters-button {
     display: block;
@@ -108,8 +107,8 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 .results-container { margin-top: 1.5rem; }
 
 /* --- Store Details Container --- */
-.store-details-container { max-width: 95%; position: relative; } /* Allow more width */
-#storeDetailsContent { font-size: 0.9rem; text-align: left; color: #d0d0d0; line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; /* For scrollbar */}
+.store-details-container { max-width: 95%; position: relative; }
+#storeDetailsContent { font-size: 0.9rem; text-align: left; color: #d0d0d0; line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; }
 #storeDetailsContent p { margin-bottom: 0.5rem; }
 #storeDetailsContent strong { color: #e5e5e5; margin-right: 5px; }
 #storeDetailsContent hr { border: none; border-top: 1px solid #444; margin: 0.75rem 0; }
@@ -133,21 +132,89 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 }
 .close-button:hover { background: #777; }
 
-
 /* --- Summary & Stat Containers (Dark Mode) --- */
 .summary-container, .rep-pmr-container, .training-stats-container { max-width: 100%; }
-.summary-container { margin-top: 1rem; } /* Adjust spacing */
+.summary-container { margin-top: 1rem; } 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
-    gap: 0.6rem 1.5rem; /* Row and column gap */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 0.6rem 1.5rem; 
     text-align: left;
     padding-left: 0;
 }
 .summary-grid p { margin: 0; font-size: 0.95rem; color: #d0d0d0; }
 .summary-grid p strong { font-weight: 600; color: #f0f0f0; margin-left: 5px; }
-.summary-grid p[style*="display: none"] { display: none !important; } /* Ensure hidden items stay hidden */
-.summary-container span[style*="background-color"] { color: #111; padding: 2px 5px; border-radius: 3px; font-weight: 500; } /* For potential future use */
+.summary-grid p[style*="display: none"] { display: none !important; } 
+.summary-container span[style*="background-color"] { color: #111; padding: 2px 5px; border-radius: 3px; font-weight: 500; }
+
+/* --- Top/Bottom 5 Section --- */
+.top-bottom-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow cards to wrap on smaller screens */
+    gap: 1.5rem;     /* Space between the top5 and bottom5 cards */
+    /* margin-top: 1.5rem; /* This is already a card, so card's margin will apply */
+    /* margin-bottom: 1.5rem; /* This is already a card, so card's margin will apply */
+    /* It's a card itself, so it gets card margins. We want space *between* internal cards. */
+}
+
+.top5-card, .bottom5-card {
+    flex: 1 1 400px; /* Allow cards to grow and shrink, with a base width */
+    min-width: 300px; /* Minimum width before wrapping */
+    /* These already have .card class for general card styling, padding, border etc. */
+    /* Override default card margin if they are direct children of flex container */
+    margin: 0; /* Remove individual margin if gap is handled by parent */
+}
+
+/* Ensure h3 within these specific cards is styled consistently */
+.top5-card h3, .bottom5-card h3 {
+    margin-top: 0; /* Remove extra top margin if card already has padding */
+    margin-bottom: 0.75rem; /* Space below heading before table */
+    font-size: 1.05rem; /* Slightly smaller h3 for these sub-cards */
+    color: #77b6ff; /* Consistent with other h2-like subheadings */
+    text-align: left;
+    border-bottom: 1px solid #444;
+    padding-bottom: 0.4rem;
+}
+
+/* Styling for tables within Top 5 / Bottom 5 cards */
+#top5Table, #bottom5Table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem; 
+    font-size: 0.85rem; 
+}
+
+#top5Table th, #top5Table td,
+#bottom5Table th, #bottom5Table td {
+    border: 1px solid #555; 
+    padding: 0.5rem 0.75rem; 
+    text-align: left;
+    white-space: nowrap;
+    color: #d0d0d0; 
+}
+
+#top5Table th, #bottom5Table th {
+    background-color: #3a3a3a; 
+    font-weight: 600;
+    color: #f0f0f0;     
+    text-transform: capitalize; 
+    font-size: 0.8rem;
+}
+
+#top5Table tbody tr, #bottom5Table tbody tr {
+    cursor: pointer;
+}
+#top5Table tbody tr:hover, #bottom5Table tbody tr:hover {
+    background-color: #383838; 
+}
+
+/* Ensure numerical data is right-aligned, except first column (Store) */
+#top5Table td:not(:first-child),
+#bottom5Table td:not(:first-child) {
+    text-align: right;
+}
+/* --- End of Top/Bottom 5 Section --- */
+
 
 .stats-row {
     display: flex;
@@ -156,8 +223,8 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     margin-top: 1rem;
 }
 .rep-pmr-container, .training-stats-container {
-    flex: 1 1 300px; /* Allow flex grow/shrink, base width 300px */
-    max-width: none; /* Remove max-width from individual cards */
+    flex: 1 1 300px; 
+    max-width: none; 
 }
 .rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: #d0d0d0; }
 .rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
@@ -165,24 +232,25 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 
 
 /* --- Chart Container (Dark Mode) --- */
-.chart-container { height: 350px; max-width: 95%; /* Wider */ background-color: #2c2c2c; }
+.chart-container { height: 350px; max-width: 95%; background-color: #2c2c2c; }
 #mainChartCanvas, #secondaryChartCanvas { width: 100% !important; height: 100% !important; }
 
 /* --- Table Container & Table (Dark Mode) --- */
-.table-container { max-width: 95%; /* Wider */ }
+.table-container { max-width: 95%; }
 .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px; }
 .table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; }
 .export-button { padding: 0.4rem 0.8rem; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 4px; font-size: 0.85em; cursor: pointer; }
 .export-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
-.table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
+.table-wrapper { overflow-x: auto; margin-top: 0.75rem; } /* This class is used in the new HTML too */
+
 #attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
 #attachRateTable th, #attachRateTable td { border: 1px solid #555; padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: #d0d0d0; }
 #attachRateTable th { background-color: #3a3a3a; font-weight: 600; color: #f0f0f0; position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
 #attachRateTable th:hover { background-color: #4a4a4a; }
-#attachRateTable tbody tr { background-color: #2c2c2c; cursor: pointer; } /* Add cursor pointer */
+#attachRateTable tbody tr { background-color: #2c2c2c; cursor: pointer; } 
 #attachRateTable tbody tr:hover { background-color: #383838; }
-#attachRateTable tbody tr.selected-row { background-color: #405d7a !important; /* Highlight selected row */ color: #fff; }
-#attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical columns, except % target */
+#attachRateTable tbody tr.selected-row { background-color: #405d7a !important; color: #fff; }
+#attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } 
 #attachRateTable tfoot tr { background-color: #333; font-weight: bold; color: #eee; }
 #attachRateTable tfoot td { border-top: 2px solid #666; }
 
@@ -205,7 +273,7 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
 
 
 /* --- MEDIA QUERIES --- */
-@media (min-width: 768px) { /* Adjusted breakpoint */
+@media (min-width: 768px) { 
     .container { padding: 15px; }
     .input-area label { display: inline-block; margin-bottom: 0; }
     #excelFile { width: auto; max-width: 350px; }
@@ -213,14 +281,14 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     .rep-pmr-container p, .training-stats-container p { font-size: 1rem; }
     .chart-container { height: 400px; }
     #attachRateTable { font-size: 0.9rem; }
-    #attachRateTable th, #attachRateTable td { padding: 0.6rem 0.8rem; } /* Slightly adjust padding */
+    #attachRateTable th, #attachRateTable td { padding: 0.6rem 0.8rem; } 
     #attachRateTable th { font-size: 0.85rem; }
     .share-controls { flex-direction: row; align-items: center; }
     .share-controls label { margin-bottom: 0; }
-    .filter-group-store { grid-column: span 1; /* Reset span */ }
+    .filter-group-store { grid-column: span 1; }
 }
 
-@media (min-width: 1200px) { /* Adjusted breakpoint */
+@media (min-width: 1200px) { 
     h1 { font-size: 2rem; margin-bottom: 2rem; }
     h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
     h3 { font-size: 1.25rem; }
@@ -230,5 +298,10 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-
     #attachRateTable { font-size: 0.9rem; }
     #attachRateTable th { font-size: 0.9rem; }
     #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
-    .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
+    .filter-group-store { grid-column: span 2; }
+
+    /* Adjust Top/Bottom card layout on larger screens */
+    .top5-card, .bottom5-card {
+        min-width: 0; /* Allow flex to distribute space more freely if desired */
+    }
 }
