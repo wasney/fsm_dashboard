@@ -1,15 +1,15 @@
 //
-//    Timestamp: 2025-05-09T00:03:15EDT
-//    Summary: Implemented light/dark theme toggle functionality, including localStorage persistence, dynamic chart theming, and meta theme-color updates.
+//    Timestamp: 2025-05-09T07:07:10EDT
+//    Summary: Added functionality for "Reset Filters" button, including event listener, handler function, and button state management.
 //
 document.addEventListener('DOMContentLoaded', () => {
     // --- Theme Constants and Elements ---
     const LIGHT_THEME_CLASS = 'light-theme';
     const THEME_STORAGE_KEY = 'themePreference';
-    const DARK_THEME_ICON = '🌙'; // Shows when light theme is active, to switch to dark
-    const LIGHT_THEME_ICON = '☀️'; // Shows when dark theme is active, to switch to light
+    const DARK_THEME_ICON = '🌙'; 
+    const LIGHT_THEME_ICON = '☀️'; 
     const DARK_THEME_META_COLOR = '#2c2c2c';
-    const LIGHT_THEME_META_COLOR = '#f4f4f8'; // Corresponds to light theme body background
+    const LIGHT_THEME_META_COLOR = '#f4f4f8'; 
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
-    const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6']; // These might need theme-specific versions later
+    const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6'];
     const TOP_N_CHART = 15; 
     const TOP_N_TABLES = 5;
 
@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterArea = document.getElementById('filterArea');
     const resultsArea = document.getElementById('resultsArea');
     const applyFiltersButton = document.getElementById('applyFiltersButton');
+    const resetFiltersButton = document.getElementById('resetFiltersButton'); // ** NEW **
     const regionFilter = document.getElementById('regionFilter');
     const districtFilter = document.getElementById('districtFilter');
     const territoryFilter = document.getElementById('territoryFilter');
@@ -130,14 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add(LIGHT_THEME_CLASS);
             if (themeToggleBtn) themeToggleBtn.textContent = DARK_THEME_ICON;
             if (metaThemeColorTag) metaThemeColorTag.setAttribute('content', LIGHT_THEME_META_COLOR);
-        } else { // Default to dark
+        } else { 
             document.body.classList.remove(LIGHT_THEME_CLASS);
             if (themeToggleBtn) themeToggleBtn.textContent = LIGHT_THEME_ICON;
             if (metaThemeColorTag) metaThemeColorTag.setAttribute('content', DARK_THEME_META_COLOR);
         }
-        // Update chart if it exists (it will use getChartThemeColors internally)
-        if (mainChartInstance && (filteredData.length > 0 || rawData.length > 0)) { // Check if chart could be active or become active
-             updateCharts(filteredData); // Re-render chart with new theme colors
+        if (mainChartInstance && (filteredData.length > 0 || (rawData.length > 0 && filteredData.length === 0) )) { 
+             updateCharts(filteredData); 
         }
     };
 
@@ -151,15 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const getChartThemeColors = () => {
         const isLight = document.body.classList.contains(LIGHT_THEME_CLASS);
         return {
-            tickColor: isLight ? '#495057' : '#e0e0e0',       // Darker ticks for light, lighter for dark
-            gridColor: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(224, 224, 224, 0.2)', // Lighter grid for light
-            legendColor: isLight ? '#333333' : '#e0e0e0'    // Darker legend for light
+            tickColor: isLight ? '#495057' : '#e0e0e0',
+            gridColor: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(224, 224, 224, 0.2)',
+            legendColor: isLight ? '#333333' : '#e0e0e0'
         };
     };
 
-
     // --- Helper Functions ---
-    // ... (formatCurrency, formatPercent, formatNumber, parseNumber, parsePercent, safeGet, isValidForAverage are unchanged)
     const formatCurrency = (value) => isNaN(value) ? 'N/A' : CURRENCY_FORMAT.format(value);
     const formatPercent = (value) => isNaN(value) ? 'N/A' : PERCENT_FORMAT.format(value);
     const formatNumber = (value) => isNaN(value) ? 'N/A' : NUMBER_FORMAT.format(value);
@@ -224,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };    
 
     // --- Core Functions ---
-    // ... (handleFile, populateFilters, addDependencyFilterListeners, updateStoreFilterOptionsBasedOnHierarchy, setStoreFilterOptions, filterStoreOptions remain unchanged)
     const handleFile = async (event) => {
         const file = event.target.files[0];
         if (!file) { if (statusDiv) statusDiv.textContent = 'No file selected.'; return; }
@@ -250,7 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         storeOptions = [...allPossibleStores]; setStoreFilterOptions(storeOptions, false);
         if (territorySelectAll) territorySelectAll.disabled = false; if (territoryDeselectAll) territoryDeselectAll.disabled = false;
         if (storeSelectAll) storeSelectAll.disabled = false; if (storeDeselectAll) storeDeselectAll.disabled = false;
-        if (storeSearch) storeSearch.disabled = false; if (applyFiltersButton) applyFiltersButton.disabled = false;
+        if (storeSearch) storeSearch.disabled = false; 
+        if (applyFiltersButton) applyFiltersButton.disabled = false;
+        if (resetFiltersButton) resetFiltersButton.disabled = false; // ** NEW: Enable reset button **
         addDependencyFilterListeners();
     };
     const addDependencyFilterListeners = () => {
@@ -292,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateTopBottomTables = (data) => {
-        // ... (This function is from the previous step, remains the same)
         if (!topBottomSection || !top5TableBody || !bottom5TableBody) { console.warn("Top/Bottom table elements not found."); return; }
         top5TableBody.innerHTML = ''; bottom5TableBody.innerHTML = '';
         const territoriesInData = new Set(data.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
@@ -320,7 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const applyFilters = () => {
-        // ... (This function is from the previous step, with updateTopBottomTables call)
         showLoading(true, true); if (resultsArea) resultsArea.style.display = 'none';
         setTimeout(() => {
             try {
@@ -348,32 +345,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     };
     
-    const resetFilters = () => {
-        // ... (This function is from the previous step)
+    // This function is for a *full UI reset* (e.g. new file, initial load)
+    const resetFiltersForFullUIReset = () => {
          const allOptionHTML = '<option value="ALL">-- Load File First --</option>';
-         [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { if (sel) { sel.innerHTML = allOptionHTML; sel.value = 'ALL'; sel.disabled = true; } });
-         if (territoryFilter) { territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; territoryFilter.selectedIndex = -1; territoryFilter.disabled = true; }
-         if (storeFilter) { storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; storeFilter.selectedIndex = -1; storeFilter.disabled = true; }
+         [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
+             if (sel) { 
+                sel.innerHTML = allOptionHTML; 
+                sel.value = 'ALL'; 
+                sel.disabled = true;
+            }
+         });
+         if (territoryFilter) { 
+            territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
+            territoryFilter.selectedIndex = -1; 
+            territoryFilter.disabled = true; 
+        }
+         if (storeFilter) {
+             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
+             storeFilter.selectedIndex = -1;
+             storeFilter.disabled = true;
+         }
          if (storeSearch) { storeSearch.value = ''; storeSearch.disabled = true; }
-         storeOptions = [];
+         
+         storeOptions = []; // This is fine here as allPossibleStores will be repopulated or is empty
+
          Object.values(flagFiltersCheckboxes).forEach(input => { if(input) {input.checked = false; input.disabled = true;} });
-         if (applyFiltersButton) applyFiltersButton.disabled = true; if (territorySelectAll) territorySelectAll.disabled = true; if (territoryDeselectAll) territoryDeselectAll.disabled = true;
-         if (storeSelectAll) storeSelectAll.disabled = true; if (storeDeselectAll) storeDeselectAll.disabled = true; if (exportCsvButton) exportCsvButton.disabled = true;
+
+         if (applyFiltersButton) applyFiltersButton.disabled = true;
+         if (resetFiltersButton) resetFiltersButton.disabled = true; // ** Ensure reset button is disabled too **
+         if (territorySelectAll) territorySelectAll.disabled = true; if (territoryDeselectAll) territoryDeselectAll.disabled = true;
+         if (storeSelectAll) storeSelectAll.disabled = true; if (storeDeselectAll) storeDeselectAll.disabled = true;
+         if (exportCsvButton) exportCsvButton.disabled = true;
+
          const handler = updateStoreFilterOptionsBasedOnHierarchy;
          [regionFilter, districtFilter, territoryFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(filter => { if (filter) filter.removeEventListener('change', handler); });
          Object.values(flagFiltersCheckboxes).forEach(input => { if (input) input.removeEventListener('change', handler); });
     };
 
      const resetUI = () => {
-        // ... (This function is from the previous step, includes Top/Bottom reset)
-         resetFilters(); 
-         if (filterArea) filterArea.style.display = 'none'; if (resultsArea) resultsArea.style.display = 'none';
+         resetFiltersForFullUIReset(); // Use the more specific reset for full UI reset
+         if (filterArea) filterArea.style.display = 'none'; 
+         if (resultsArea) resultsArea.style.display = 'none';
          if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
-         if (attachRateTableBody) attachRateTableBody.innerHTML = ''; if (attachRateTableFooter) attachRateTableFooter.innerHTML = ''; if (attachTableStatus) attachTableStatus.textContent = '';
-         if (topBottomSection) topBottomSection.style.display = 'none'; if (top5TableBody) top5TableBody.innerHTML = ''; if (bottom5TableBody) bottom5TableBody.innerHTML = '';
-         hideStoreDetails(); updateSummary([]); if(statusDiv) statusDiv.textContent = 'No file selected.';
-         allPossibleStores = []; rawData = []; filteredData = [];
+         if (attachRateTableBody) attachRateTableBody.innerHTML = ''; 
+         if (attachRateTableFooter) attachRateTableFooter.innerHTML = ''; 
+         if (attachTableStatus) attachTableStatus.textContent = '';
+         if (topBottomSection) topBottomSection.style.display = 'none'; 
+         if (top5TableBody) top5TableBody.innerHTML = ''; 
+         if (bottom5TableBody) bottom5TableBody.innerHTML = '';
+         hideStoreDetails(); 
+         updateSummary([]); 
+         if(statusDiv) statusDiv.textContent = 'No file selected.';
+         allPossibleStores = []; 
+         rawData = []; 
+         filteredData = [];
      };
+
+    // ** NEW Function for the Reset Filters Button Click **
+    const handleResetFiltersClick = () => {
+        // 1. Reset filter control values to defaults
+        [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
+            if (sel) sel.value = 'ALL'; 
+        });
+        if (territoryFilter) territoryFilter.selectedIndex = -1;
+        if (storeFilter) storeFilter.selectedIndex = -1; // Deselect any selected stores
+        if (storeSearch) storeSearch.value = ''; // Clear search
+        Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.checked = false; });
+
+        // 2. Update store filter based on reset hierarchy (will show all if rawData exists)
+        if (rawData.length > 0) {
+            updateStoreFilterOptionsBasedOnHierarchy(); // This will repopulate storeFilter based on 'ALL' from others
+        } else {
+            // If no rawData, ensure store filter is truly reset like in initial load
+            if (storeFilter) {
+                storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>';
+                storeFilter.disabled = true;
+            }
+            if (storeSearch) storeSearch.disabled = true;
+            if (storeSelectAll) storeSelectAll.disabled = true;
+            if (storeDeselectAll) storeDeselectAll.disabled = true;
+        }
+
+        // 3. Hide results area and clear visual elements
+        if (resultsArea) resultsArea.style.display = 'none';
+        if (topBottomSection) topBottomSection.style.display = 'none';
+        if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
+        if (attachRateTableBody) attachRateTableBody.innerHTML = '';
+        if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
+        if (attachTableStatus) attachTableStatus.textContent = '';
+        hideStoreDetails(); // Clears details and selected row highlight
+
+        // 4. Clear filtered data array & disable export
+        filteredData = [];
+        if (exportCsvButton) exportCsvButton.disabled = true;
+
+        // 5. Update status message
+        if (statusDiv) {
+            if (rawData.length > 0) {
+                statusDiv.textContent = 'Filters reset. Click "Apply Filters" to see results.';
+            } else {
+                statusDiv.textContent = 'No file selected. Load a file to use filters.';
+            }
+        }
+        // Note: Apply Filters button remains enabled if a file is loaded, allowing re-application.
+    };
+
 
     const updateSummary = (data) => {
         // ... (This function is from the previous step with Elite Score exclusion)
@@ -438,81 +514,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateCharts = (data) => {
-        // ** MODIFIED to use getChartThemeColors **
-        if (mainChartInstance) {
-            mainChartInstance.destroy();
-            mainChartInstance = null;
-        }
-        if (!mainChartCanvas || (data.length === 0 && rawData.length === 0) ) { // Don't try to draw if no data ever loaded or canvas missing
-             if (mainChartCanvas && mainChartInstance) { // Clear if canvas exists but no data
-                mainChartInstance = new Chart(mainChartCanvas, {type: 'bar', data: {labels:[], datasets:[]}}); // Clear with empty chart
-                mainChartInstance.destroy();
-                mainChartInstance = null;
-            }
-            return;
-        }
-        
-        const chartThemeColors = getChartThemeColors(); // Get current theme colors
-
-        // If no filtered data, but raw data exists, we might show an empty chart or a message
-        // For now, if data is empty, we'll effectively clear the chart by not providing datasets.
-        // Or, if we want to keep the structure but show "No data", the chart must be handled.
-        // The existing logic will create an empty chart if data is empty.
-
+        // ... (This function is from the previous step, with theme color logic)
+        if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
+        if (!mainChartCanvas || (data.length === 0 && rawData.length === 0) ) { if (mainChartCanvas && mainChartInstance) { mainChartInstance = new Chart(mainChartCanvas, {type: 'bar', data: {labels:[], datasets:[]}}); mainChartInstance.destroy(); mainChartInstance = null;} return; }
+        const chartThemeColors = getChartThemeColors(); 
         const sortedData = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', 0)) - parseNumber(safeGet(a, 'Revenue w/DF', 0)));
         const chartData = sortedData.slice(0, TOP_N_CHART);
-
         const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown Store'));
         const revenueDataSet = chartData.map(row => parseNumber(safeGet(row, 'Revenue w/DF', 0)));
         const targetDataSet = chartData.map(row => parseNumber(safeGet(row, 'QTD Revenue Target', 0)));
-
-        const backgroundColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)'); // Consider theming these too
+        const backgroundColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)'); 
         const borderColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)');
-
         mainChartInstance = new Chart(mainChartCanvas, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Total Revenue (incl. DF)', data: revenueDataSet, backgroundColor: backgroundColors, borderColor: borderColors, borderWidth: 1
-                    },
-                    {
-                        label: 'QTD Revenue Target', data: targetDataSet, type: 'line', borderColor: 'rgba(255, 206, 86, 1)', /* consider theming */ backgroundColor: 'rgba(255, 206, 86, 0.2)', fill: false, tension: 0.1, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5
-                    }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, ticks: { color: chartThemeColors.tickColor, callback: value => formatCurrency(value) }, grid: { color: chartThemeColors.gridColor } },
-                    x: { ticks: { color: chartThemeColors.tickColor }, grid: { display: false } }
-                },
-                plugins: {
-                    legend: { labels: { color: chartThemeColors.legendColor } },
-                    tooltip: {
-                        callbacks: {
-                             label: function(context) {
-                                let label = context.dataset.label || ''; if (label) label += ': ';
-                                if (context.parsed.y !== null) {
-                                    label += formatCurrency(context.parsed.y);
-                                    if (context.dataset.type !== 'line' && chartData[context.dataIndex]) {
-                                        const storeData = chartData[context.dataIndex]; const percentQtrTarget = parsePercent(safeGet(storeData, '% Quarterly Revenue Target', 0));
-                                        if (!isNaN(percentQtrTarget)) { label += ` (${formatPercent(percentQtrTarget)} of Qtr Target)`; }
-                                    }
-                                } return label;
-                            }
-                        }
-                    }
-                },
-                onClick: (_, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index; const storeName = labels[index];
-                        const storeData = filteredData.find(row => safeGet(row, 'Store', null) === storeName);
-                        if (storeData) { showStoreDetails(storeData); highlightTableRow(storeName); }
-                    }
-                }
-            }
+            type: 'bar', data: { labels: labels, datasets: [ { label: 'Total Revenue (incl. DF)', data: revenueDataSet, backgroundColor: backgroundColors, borderColor: borderColors, borderWidth: 1 }, { label: 'QTD Revenue Target', data: targetDataSet, type: 'line', borderColor: 'rgba(255, 206, 86, 1)', backgroundColor: 'rgba(255, 206, 86, 0.2)', fill: false, tension: 0.1, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5 } ] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: chartThemeColors.tickColor, callback: value => formatCurrency(value) }, grid: { color: chartThemeColors.gridColor } }, x: { ticks: { color: chartThemeColors.tickColor }, grid: { display: false } } }, plugins: { legend: { labels: { color: chartThemeColors.legendColor } }, tooltip: { callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) label += ': '; if (context.parsed.y !== null) { label += formatCurrency(context.parsed.y); if (context.dataset.type !== 'line' && chartData[context.dataIndex]) { const storeData = chartData[context.dataIndex]; const percentQtrTarget = parsePercent(safeGet(storeData, '% Quarterly Revenue Target', 0)); if (!isNaN(percentQtrTarget)) { label += ` (${formatPercent(percentQtrTarget)} of Qtr Target)`; } } } return label; } } } }, onClick: (_, elements) => { if (elements.length > 0) { const index = elements[0].index; const storeName = labels[index]; const storeData = filteredData.find(row => safeGet(row, 'Store', null) === storeName); if (storeData) { showStoreDetails(storeData); highlightTableRow(storeName); } } } }
         });
     };
 
@@ -593,7 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const highlightTableRow = (storeName) => {
-        // ... (This function is from the previous step, includes Top/Bottom table body IDs)
+        // ... (This function is from the previous step)
         if (selectedStoreRow) { selectedStoreRow.classList.remove('selected-row'); selectedStoreRow = null; }
         if (storeName) {
             const tablesToSearch = [attachRateTableBody, top5TableBody, bottom5TableBody];
@@ -625,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateEmailBody = () => {
-        // ... (This function is from the previous step, includes Top/Bottom 5 details)
+        // ... (This function is from the previous step)
         if (filteredData.length === 0) return "No data available based on current filters.";
         let body = "FSM Dashboard Summary:\n---------------------------------\n"; body += `Filters Applied: ${getFilterSummary()}\nStores Found: ${filteredData.length}\n---------------------------------\n\n`;
         body += "Performance Summary:\n"; body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`; body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
@@ -683,9 +698,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Event Listeners ---
-    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme); // ** NEW Event Listener **
+    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+    if (resetFiltersButton) resetFiltersButton.addEventListener('click', handleResetFiltersClick); // ** NEW Event Listener **
     
-    // ... (Rest of event listeners are from the previous step)
     excelFileInput?.addEventListener('change', handleFile);
     applyFiltersButton?.addEventListener('click', applyFilters);
     storeSearch?.addEventListener('input', filterStoreOptions);
@@ -699,10 +714,10 @@ document.addEventListener('DOMContentLoaded', () => {
     attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
 
     // --- Initial Setup ---
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY); // ** NEW Load saved theme **
-    applyTheme(savedTheme || 'dark'); // Apply saved theme or default to dark
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY); 
+    applyTheme(savedTheme || 'dark'); 
 
-    resetUI(); // Existing resetUI call
+    resetUI(); // This will call resetFiltersForFullUIReset which disables buttons initially
     if (!mainChartCanvas) console.warn("Main chart canvas context not found on load. Chart will not render.");
 
 }); // End DOMContentLoaded
