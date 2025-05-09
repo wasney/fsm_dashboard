@@ -1,6 +1,6 @@
 /*
-    Timestamp: 2025-05-08T23:59:50EDT
-    Summary: Major refactor to use CSS Custom Properties for theming. Added light theme via .light-theme class and styled the theme toggle button.
+    Timestamp: 2025-05-09T06:54:45EDT
+    Summary: Added styles for 'filter-actions-container' and 'reset-filters-button'. Adjusted 'apply-filters-button' for flex layout.
 */
 
 :root {
@@ -124,14 +124,14 @@ body {
     position: fixed;
     top: 15px;
     right: 15px;
-    z-index: 1001; /* High z-index to stay on top */
+    z-index: 1001; 
     background-color: var(--card-bg);
     color: var(--text-color);
     border: 1px solid var(--border-color);
     padding: 0.4rem 0.6rem;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 1.1rem; /* Make icon slightly larger */
+    font-size: 1.1rem; 
     line-height: 1;
     box-shadow: 0 1px 3px var(--card-shadow);
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
@@ -197,8 +197,61 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading-color); font-weigh
 .flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-color-checkbox); cursor: pointer; margin: 0; }
 .flag-toggles label:has(input:disabled) { cursor: not-allowed; color: var(--disabled-text); }
 
-.apply-filters-button { display: block; width: 100%; max-width: 250px; margin: 1rem auto 0 auto; padding: 0.7rem 1rem; background-color: var(--button-primary-bg); color: var(--button-primary-text); border: none; border-radius: 0.25rem; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background-color 0.2s ease; }
-.apply-filters-button:hover:not(:disabled) { background-color: var(--button-primary-hover-bg); }
+/* --- Filter Action Buttons --- */
+.filter-actions-container {
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    gap: 1rem; 
+    margin-top: 1.5rem; 
+    flex-wrap: wrap; 
+}
+
+.apply-filters-button {
+    max-width: 250px; 
+    padding: 0.7rem 1rem;
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-text);
+    border: none;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-grow: 0; 
+    flex-shrink: 0;
+}
+.apply-filters-button:hover:not(:disabled) { 
+    background-color: var(--button-primary-hover-bg); 
+}
+
+.reset-filters-button {
+    max-width: 250px;
+    padding: 0.7rem 1rem;
+    background-color: var(--button-bg); 
+    color: var(--button-text);
+    border: 1px solid var(--button-border);
+    border-radius: 0.25rem;
+    font-weight: 500; 
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+.reset-filters-button:hover:not(:disabled) {
+    background-color: var(--button-hover-bg);
+    color: var(--button-hover-text);
+    border-color: var(--button-hover-bg);
+}
+.reset-filters-button:disabled {
+    background-color: var(--disabled-bg) !important;
+    color: var(--disabled-text) !important;
+    border-color: var(--disabled-border) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
 
 /* --- Results Area --- */
 .results-container { margin-top: 1.5rem; }
@@ -209,7 +262,7 @@ h3 { margin-top: 0; margin-bottom: 1rem; color: var(--heading-color); font-weigh
 #storeDetailsContent p { margin-bottom: 0.5rem; }
 #storeDetailsContent strong { color: var(--text-color-strong); margin-right: 5px; }
 #storeDetailsContent hr { border: none; border-top: 1px solid var(--border-color); margin: 0.75rem 0; }
-#storeDetailsContent span[data-flag="true"] { color: #28a745; font-weight: bold; } /* Keep specific green for 'true' flag */
+#storeDetailsContent span[data-flag="true"] { color: #28a745; font-weight: bold; } 
 body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 #storeDetailsContent span[data-flag="false"] { color: var(--text-color-muted); }
 .close-button { position: absolute; top: 10px; right: 10px; background: var(--close-button-bg); color: var(--close-button-text); border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 16px; line-height: 22px; text-align: center; cursor: pointer; font-weight: bold; }
@@ -224,13 +277,13 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 .summary-grid p[style*="display: none"] { display: none !important; } 
 
 /* --- Top/Bottom 5 Section --- */
-.top-bottom-container { display: flex; flex-wrap: wrap; gap: 1.5rem; /* margin-top: 1.5rem; Now a card itself */ /* margin-bottom: 1.5rem; */ }
-.top5-card, .bottom5-card { flex: 1 1 400px; min-width: 300px; margin: 0; /* Overrides default .card margin as child of flex */ }
+.top-bottom-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.top5-card, .bottom5-card { flex: 1 1 400px; min-width: 300px; margin: 0; }
 .top5-card h3, .bottom5-card h3 { margin-top: 0; margin-bottom: 0.75rem; font-size: 1.05rem; color: var(--sub-heading-color); text-align: left; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; }
 #top5Table, #bottom5Table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.85rem; }
 #top5Table th, #top5Table td, #bottom5Table th, #bottom5Table td { border: 1px solid var(--table-cell-border); padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: var(--table-cell-text); }
 #top5Table th, #bottom5Table th { background-color: var(--table-header-bg); font-weight: 600; color: var(--table-header-text); text-transform: capitalize; font-size: 0.8rem; }
-#top5Table tbody tr, #bottom5Table tbody tr { cursor: pointer; }
+#top5Table tbody tr, #bottom5Table tbody tr { cursor: pointer; background-color: var(--table-row-bg); /* Ensure explicit bg for theme */ }
 #top5Table tbody tr:hover, #bottom5Table tbody tr:hover { background-color: var(--table-row-hover-bg); }
 #top5Table td:not(:first-child), #bottom5Table td:not(:first-child) { text-align: right; }
 
@@ -241,13 +294,13 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 .rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: var(--text-color-strong); }
 
 /* --- Chart Container --- */
-.chart-container { height: 350px; max-width: 95%; background-color: var(--card-bg); /* Chart bg matches card */ }
+.chart-container { height: 350px; max-width: 95%; background-color: var(--card-bg); }
 #mainChartCanvas, #secondaryChartCanvas { width: 100% !important; height: 100% !important; }
 
 /* --- Table Container & Table --- */
 .table-container { max-width: 95%; }
 .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px; }
-.table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; color: var(--sub-heading-color); /* Ensure h2 color uses variable */ }
+.table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; color: var(--sub-heading-color); }
 .export-button { padding: 0.4rem 0.8rem; background-color: var(--button-bg); color: var(--button-text); border: 1px solid var(--button-border); border-radius: 4px; font-size: 0.85em; cursor: pointer; }
 .export-button:hover:not(:disabled) { background-color: var(--button-hover-bg); color: var(--button-hover-text); }
 .table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
@@ -255,7 +308,7 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 #attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
 #attachRateTable th, #attachRateTable td { border: 1px solid var(--table-cell-border); padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: var(--table-cell-text); }
 #attachRateTable th { background-color: var(--table-header-bg); font-weight: 600; color: var(--table-header-text); position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
-#attachRateTable th:hover { background-color: var(--button-hover-bg); /* Consistent hover for table headers too */ }
+#attachRateTable th:hover { background-color: var(--button-hover-bg); }
 #attachRateTable tbody tr { background-color: var(--table-row-bg); cursor: pointer; } 
 #attachRateTable tbody tr:hover { background-color: var(--table-row-hover-bg); }
 #attachRateTable tbody tr.selected-row { background-color: var(--selected-row-bg) !important; color: var(--selected-row-text); }
@@ -265,9 +318,7 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 
 .highlight-green { background-color: var(--highlight-green-bg) !important; color: var(--highlight-green-text); }
 .highlight-red { background-color: var(--highlight-red-bg) !important; color: var(--highlight-red-text); }
-.sort-arrow { display: inline-block; width: 12px; height: 12px; margin-left: 5px; opacity: 0.5; vertical-align: middle; /* Arrow color will inherit text color */ }
-/* .sort-arrow.asc::after { content: '▲'; font-size: 0.8em; } */ /* Handled by JS now */
-/* .sort-arrow.desc::after { content: '▼'; font-size: 0.8em; } */
+.sort-arrow { display: inline-block; width: 12px; height: 12px; margin-left: 5px; opacity: 0.5; vertical-align: middle; }
 #attachTableStatus { margin-top: 0.75rem; color: var(--text-color-muted); font-size: 0.85rem; text-align: center; }
 
 /* --- Share Section --- */
@@ -299,16 +350,13 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
 @media (min-width: 1200px) { 
     h1 { font-size: 2rem; margin-bottom: 2rem; }
     h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
-    /* h3 { font-size: 1.25rem; } */ /* General h3 is 1.15rem, specific card h3s might differ */
     .card { padding: 1.5rem; margin: 1.5rem auto; }
-    .top-bottom-container.card { /* Ensure outer top-bottom card also gets larger padding */
-        padding: 1.5rem;
-    }
+    .top-bottom-container.card { padding: 1.5rem; }
     .filter-controls { gap: 1.2rem 2rem; }
     .chart-container { height: 450px; }
     #attachRateTable { font-size: 0.9rem; }
     #attachRateTable th { font-size: 0.9rem; }
     #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
     .filter-group-store { grid-column: span 2; }
-    .top5-card, .bottom5-card { min-width: 0; } /* Allow more flexible sizing on very large screens */
+    .top5-card, .bottom5-card { min-width: 0; }
 }
