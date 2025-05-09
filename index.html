@@ -20,7 +20,7 @@
         <div id="loadingIndicator" style="display: none;">
             <div class="spinner"></div> Processing file...
         </div>
-        </div>
+    </div>
 
     <div id="filterArea" class="card" style="display: none;">
         <h2>Filters</h2>
@@ -110,7 +110,7 @@
                 <p title="Calculated Gap (Total Revenue - QTD Target) for filtered stores">QTD Gap: <strong id="qtdGapValue">N/A</strong></p>
                 <p title="Sum of 'Quarterly Revenue Target' for filtered stores">Full Quarter Target: <strong id="quarterlyRevenueTargetValue">N/A</strong></p>
                 <p title="Overall REV% to Quarterly Target (Total Revenue / Total Quarterly Target)">REV% to Quarterly Target: <strong id="percentQuarterlyStoreTargetValue">N/A</strong></p>
-                <p title="Average 'Rev AR%' across stores with data">Rev AR%: <strong id="revARValue">N/A</strong></p>
+                <p title="Rev AR% for selected stores with data">Rev AR%: <strong id="revARValue">N/A</strong></p>
 
                  <p title="Sum of 'Unit w/ DF' for filtered stores">Total Units (incl. DF): <strong id="unitsWithDFValue">N/A</strong></p>
                 <p title="Sum of 'Unit Target' for filtered stores">Unit Target: <strong id="unitTargetValue">N/A</strong></p>
@@ -174,7 +174,8 @@
                          </tr>
                      </thead>
                     <tbody id="attachRateTableBody"></tbody>
-                    <tfoot id="attachRateTableFooter"></tfoot> </table>
+                    <tfoot id="attachRateTableFooter"></tfoot>
+                 </table>
             </div>
              <p id="attachTableStatus" class="table-status"></p>
         </div>
@@ -190,7 +191,8 @@
             <p class="share-note">Note: This will open your default desktop email client with a pre-filled summary. You must click "Send" in the email client.</p>
         </div>
 
-    </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js"></script>
     <script src="script.js"></script>
 
