@@ -6,7 +6,8 @@
     <title>FSM Dashboard Enhanced</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
-    <meta name="theme-color" content="#2c2c2c"> </head>
+    <meta name="theme-color" content="#2c2c2c"> 
+</head>
 <body>
     <button id="themeToggleBtn" class="theme-toggle-button" title="Toggle theme">☀️</button>
 
@@ -87,7 +88,10 @@
                  </div>
             </div>
         </div>
-         <button id="applyFiltersButton" class="apply-filters-button" disabled>Apply Filters</button>
+        <div class="filter-actions-container">
+            <button id="resetFiltersButton" class="reset-filters-button" disabled>Reset Filters</button>
+            <button id="applyFiltersButton" class="apply-filters-button" disabled>Apply Filters</button>
+        </div>
          <div id="filterLoadingIndicator" style="display: none;">
             <div class="spinner-small"></div> Applying filters...
          </div>
