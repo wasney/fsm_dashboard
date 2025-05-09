@@ -1,32 +1,31 @@
 //
-//    Timestamp: 2025-05-08T22:35:56EDT
-//    Summary: Updated the tooltip for the 'Rev AR%' summary metric as requested.
+//    Timestamp: 2025-05-08T23:47:15EDT
+//    Summary: Integrated Top 5 / Bottom 5 tables functionality, including HTML element selection, helper functions, main update function, and updated row highlighting.
 //
 document.addEventListener('DOMContentLoaded', () => {
     // --- Configuration ---
-    const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
+    const REQUIRED_HEADERS = [ 
         'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
         'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
-        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%',
+        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%', 
         'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
         'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
         'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
         'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate', 'SUPER STORE', 'GOLDEN RHINO',
         'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE',
-        // Store Details Headers:
         'STORE ID', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE',
-        'LATITUDE_ORG', 'LONGITUDE_ORG', // For Google Maps
-        'ORG_STORE_ID', 'CV_STORE_ID', 'CINGLEPOINT_ID', // Additional IDs
-        'STORE_TYPE_NAME', 'National_Tier', 'Merchandising_Level', 'Combined_Tier', // Store Type/Tier info
-        // Context headers if needed for display/logic
+        'LATITUDE_ORG', 'LONGITUDE_ORG', 
+        'ORG_STORE_ID', 'CV_STORE_ID', 'CINGLEPOINT_ID', 
+        'STORE_TYPE_NAME', 'National_Tier', 'Merchandising_Level', 'Combined_Tier', 
         '%Quarterly Territory Rev Target', 'Region Rev%', 'District Rev%', 'Territory Rev%'
     ];
-    const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE']; // Used for Flag summary in details
+    const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE'];
     const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
     const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6'];
-    const TOP_N_CHART = 15; // Max items to show on the bar chart
+    const TOP_N_CHART = 15; 
+    const TOP_N_TABLES = 5; // For Top/Bottom 5 tables
 
     // --- DOM Elements ---
     const excelFileInput = document.getElementById('excelFile');
@@ -57,16 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'AI_Zone':           expectedId = 'aiZoneFilter'; break;
             case 'Hispanic_Market':   expectedId = 'hispanicMarketFilter'; break;
             case 'EV ROUTE':          expectedId = 'evRouteFilter'; break;
-            default:
-                console.warn(`Unknown flag header encountered during mapping: ${header}`);
-                return acc;
+            default: console.warn(`Unknown flag header encountered during mapping: ${header}`); return acc;
         }
         const element = document.getElementById(expectedId);
-        if (element) {
-            acc[header] = element;
-        } else {
-            console.warn(`Flag filter checkbox not found for ID: ${expectedId} (Header: ${header}) upon initial mapping. Check HTML.`);
-        }
+        if (element) { acc[header] = element; } 
+        else { console.warn(`Flag filter checkbox not found for ID: ${expectedId} (Header: ${header}) upon initial mapping. Check HTML.`);}
         return acc;
     }, {});
 
@@ -81,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qtdGapValue = document.getElementById('qtdGapValue');
     const quarterlyRevenueTargetValue = document.getElementById('quarterlyRevenueTargetValue');
     const percentQuarterlyStoreTargetValue = document.getElementById('percentQuarterlyStoreTargetValue');
-    const revARValue = document.getElementById('revARValue'); // This is the element we'll update
+    const revARValue = document.getElementById('revARValue');
     const unitsWithDFValue = document.getElementById('unitsWithDFValue');
     const unitTargetValue = document.getElementById('unitTargetValue');
     const unitAchievementValue = document.getElementById('unitAchievementValue');
@@ -108,6 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachRateTable = document.getElementById('attachRateTable');
     const exportCsvButton = document.getElementById('exportCsvButton');
 
+    // ** NEW ** Top/Bottom 5 DOM Elements
+    const topBottomSection = document.getElementById('topBottomSection');
+    const top5TableBody = document.getElementById('top5TableBody');
+    const bottom5TableBody = document.getElementById('bottom5TableBody');
+
     // Chart Elements
     const mainChartCanvas = document.getElementById('mainChartCanvas')?.getContext('2d');
 
@@ -127,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let mainChartInstance = null;
     let storeOptions = [];
     let allPossibleStores = [];
-    let currentSort = { column: 'Store', ascending: true };
+    let currentSort = { column: 'Store', ascending: true }; // For main Attach Rate Table
     let selectedStoreRow = null;
 
     // --- Helper Functions ---
@@ -163,6 +162,28 @@ document.addEventListener('DOMContentLoaded', () => {
          if (value === null || value === undefined || String(value).trim() === '') return false;
          return !isNaN(parseNumber(String(value).replace('%','')));
     };
+
+    // ** NEW ** Helper functions for Top/Bottom 5 table cell values
+    const calculateQtdGap = (row) => {
+        const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0)); // Default to 0 for calculation if missing
+        const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
+        // If either is truly NaN (not just 0), the gap is not meaningful for sorting as "worst"
+        if (isNaN(revenue) || isNaN(target)) { return Infinity; } // Place problematic rows last in ascending sort
+        return revenue - target;
+    };
+    const calculateRevARPercentForRow = (row) => { // Renamed to avoid conflict if a global RevAR% is different
+        const revenue = parseNumber(safeGet(row, 'Revenue w/DF', 0));
+        const target = parseNumber(safeGet(row, 'QTD Revenue Target', 0));
+        if (target === 0 || isNaN(revenue) || isNaN(target)) { return NaN; } // Avoid division by zero or NaN
+        return revenue / target;
+    };
+    const calculateUnitAchievementPercentForRow = (row) => { // Renamed for clarity
+        const units = parseNumber(safeGet(row, 'Unit w/ DF', 0));
+        const target = parseNumber(safeGet(row, 'Unit Target', 0));
+        if (target === 0 || isNaN(units) || isNaN(target)) { return NaN; } // Avoid division by zero or NaN
+        return units / target;
+    };
+    
     const getUniqueValues = (data, column) => {
         const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => String(val).trim() !== ''));
         return ['ALL', ...Array.from(values).sort()];
@@ -201,10 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (loadingIndicator) loadingIndicator.style.display = displayStyle;
             if (excelFileInput) excelFileInput.disabled = isLoading;
         }
-    };
+    };    
 
     // --- Core Functions ---
     const handleFile = async (event) => {
+        // ... (This function remains largely the same as our current version)
         const file = event.target.files[0];
         if (!file) {
             if (statusDiv) statusDiv.textContent = 'No file selected.';
@@ -255,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const populateFilters = (data) => {
+        // ... (This function remains largely the same)
         setOptions(regionFilter, getUniqueValues(data, 'REGION'));
         setOptions(districtFilter, getUniqueValues(data, 'DISTRICT'));
         setMultiSelectOptions(territoryFilter, getUniqueValues(data, 'Q2 Territory').slice(1));
@@ -279,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const addDependencyFilterListeners = () => {
+        // ... (This function remains largely the same)
         const handler = updateStoreFilterOptionsBasedOnHierarchy;
         const filtersToListen = [regionFilter, districtFilter, territoryFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter];
         
@@ -297,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      const updateStoreFilterOptionsBasedOnHierarchy = () => {
+        // ... (This function remains largely the same)
         if (rawData.length === 0) return;
 
         const selectedRegion = regionFilter?.value;
@@ -352,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const setStoreFilterOptions = (optionsToShow, disable = true) => {
+        // ... (This function remains largely the same)
         if (!storeFilter) return;
         const currentSearchTerm = storeSearch?.value || '';
         storeFilter.innerHTML = '';
@@ -370,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const filterStoreOptions = () => {
+        // ... (This function remains largely the same)
         if (!storeFilter || !storeSearch) return;
         const searchTerm = storeSearch.value.toLowerCase();
         const filteredOptions = storeOptions.filter(opt => opt.text.toLowerCase().includes(searchTerm));
@@ -389,6 +416,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (storeSelectAll) storeSelectAll.disabled = storeFilter.disabled || filteredOptions.length === 0;
         if (storeDeselectAll) storeDeselectAll.disabled = storeFilter.disabled || filteredOptions.length === 0;
+    };
+
+    // ** NEW/PORTED Function **
+    const updateTopBottomTables = (data) => {
+        if (!topBottomSection || !top5TableBody || !bottom5TableBody) {
+            console.warn("Top/Bottom table elements not found.");
+            return;
+        }
+        top5TableBody.innerHTML = ''; 
+        bottom5TableBody.innerHTML = '';
+
+        // Determine if a single territory is selected from the filtered data
+        const territoriesInData = new Set(data.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
+        const isSingleTerritorySelected = territoriesInData.size === 1;
+
+        if (!isSingleTerritorySelected || data.length === 0) {
+            topBottomSection.style.display = 'none';
+            return;
+        }
+        topBottomSection.style.display = 'flex'; // Or 'block' depending on desired layout (CSS will handle flex)
+
+        // Top 5 by Revenue
+        const top5Data = [...data]
+            .sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', -Infinity)) - parseNumber(safeGet(a, 'Revenue w/DF', -Infinity)))
+            .slice(0, TOP_N_TABLES);
+
+        top5Data.forEach(row => {
+            const tr = top5TableBody.insertRow();
+            const storeName = safeGet(row, 'Store', 'N/A');
+            tr.dataset.storeName = storeName; // For highlighting and details
+            tr.onclick = () => { showStoreDetails(row); highlightTableRow(storeName); };
+
+            const revenue = parseNumber(safeGet(row, 'Revenue w/DF', NaN));
+            const revAR = calculateRevARPercentForRow(row);
+            const unitAch = calculateUnitAchievementPercentForRow(row);
+            const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+            tr.insertCell().textContent = storeName;
+            tr.cells[0].title = storeName;
+            tr.insertCell().textContent = formatCurrency(revenue);
+            tr.cells[1].title = formatCurrency(revenue);
+            tr.insertCell().textContent = formatPercent(revAR);
+            tr.cells[2].title = formatPercent(revAR);
+            tr.insertCell().textContent = formatPercent(unitAch);
+            tr.cells[3].title = formatPercent(unitAch);
+            tr.insertCell().textContent = formatNumber(visits);
+            tr.cells[4].title = formatNumber(visits);
+        });
+
+        // Bottom 5 by QTD Gap (Opportunities)
+        const bottom5Data = [...data]
+            .sort((a, b) => calculateQtdGap(a) - calculateQtdGap(b)) // Ascending gap (most negative first)
+            .slice(0, TOP_N_TABLES);
+
+        bottom5Data.forEach(row => {
+            const tr = bottom5TableBody.insertRow();
+            const storeName = safeGet(row, 'Store', 'N/A');
+            tr.dataset.storeName = storeName; // For highlighting and details
+            tr.onclick = () => { showStoreDetails(row); highlightTableRow(storeName); };
+            
+            const qtdGap = calculateQtdGap(row);
+            const revAR = calculateRevARPercentForRow(row);
+            const unitAch = calculateUnitAchievementPercentForRow(row);
+            const visits = parseNumber(safeGet(row, 'Visit count', NaN));
+
+            tr.insertCell().textContent = storeName;
+            tr.cells[0].title = storeName;
+            tr.insertCell().textContent = formatCurrency(qtdGap === Infinity ? NaN : qtdGap); // Handle Infinity for display
+            tr.cells[1].title = formatCurrency(qtdGap === Infinity ? NaN : qtdGap);
+            tr.insertCell().textContent = formatPercent(revAR);
+            tr.cells[2].title = formatPercent(revAR);
+            tr.insertCell().textContent = formatPercent(unitAch);
+            tr.cells[3].title = formatPercent(unitAch);
+            tr.insertCell().textContent = formatNumber(visits);
+            tr.cells[4].title = formatNumber(visits);
+        });
     };
 
     const applyFilters = () => {
@@ -432,8 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 updateSummary(filteredData);
+                updateTopBottomTables(filteredData); // ** NEW Call **
                 updateCharts(filteredData);
-                updateAttachRateTable(filteredData);
+                updateAttachRateTable(filteredData); 
 
                 if (filteredData.length === 1) {
                     showStoreDetails(filteredData[0]);
@@ -453,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (resultsArea) resultsArea.style.display = 'none';
                 if (exportCsvButton) exportCsvButton.disabled = true;
                 updateSummary([]);
+                updateTopBottomTables([]); // ** NEW Call for error case **
                 updateCharts([]);
                 updateAttachRateTable([]);
                 hideStoreDetails();
@@ -461,8 +566,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 10);
     };
-
+    
     const resetFilters = () => {
+        // ... (This function remains largely the same as our current version)
          const allOptionHTML = '<option value="ALL">-- Load File First --</option>';
          [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
              if (sel) { 
@@ -504,13 +610,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      const resetUI = () => {
+        // ... (This function is updated to include resetting Top/Bottom tables)
          resetFilters(); 
          if (filterArea) filterArea.style.display = 'none';
          if (resultsArea) resultsArea.style.display = 'none';
          if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
-         if (attachRateTableBody) attachRateTableBody.innerHTML = '';
+         
+         if (attachRateTableBody) attachRateTableBody.innerHTML = ''; 
          if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
          if (attachTableStatus) attachTableStatus.textContent = '';
+         
+         // ** NEW Reset for Top/Bottom tables **
+         if (topBottomSection) topBottomSection.style.display = 'none';
+         if (top5TableBody) top5TableBody.innerHTML = '';
+         if (bottom5TableBody) bottom5TableBody.innerHTML = '';
+
          hideStoreDetails();
          updateSummary([]); 
          if(statusDiv) statusDiv.textContent = 'No file selected.';
@@ -520,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
      };
 
     const updateSummary = (data) => {
+        // ... (This function is our current version with Elite Score % exclusion and Rev AR% title change)
         const totalCount = data.length;
 
         const fieldsToClearText = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
@@ -544,29 +659,39 @@ document.addEventListener('DOMContentLoaded', () => {
         let sumRepSkill = 0, countRepSkill = 0;
         let sumPmr = 0, countPmr = 0;
         let sumPostTraining = 0, countPostTraining = 0;
-        let sumElite = 0, countElite = 0;
+        let sumElite = 0, countElite = 0; 
 
         data.forEach(row => {
             let valStr;
+            const subChannel = safeGet(row, 'SUB_CHANNEL', null); 
+
             valStr = safeGet(row, 'Retail Mode Connectivity', null); 
             if (isValidForAverage(valStr)) { sumConnectivity += parsePercent(valStr); countConnectivity++; }
+            
             valStr = safeGet(row, 'Rep Skill Ach', null); 
             if (isValidForAverage(valStr)) { sumRepSkill += parsePercent(valStr); countRepSkill++; }
+            
             valStr = safeGet(row, '(V)PMR Ach', null); 
             if (isValidForAverage(valStr)) { sumPmr += parsePercent(valStr); countPmr++; }
+            
             valStr = safeGet(row, 'Post Training Score', null); 
             if (isValidForAverage(valStr)) { sumPostTraining += parseNumber(valStr); countPostTraining++; }
-            valStr = safeGet(row, 'Elite', null); 
-            if (isValidForAverage(valStr)) { sumElite += parsePercent(valStr); countElite++; }
+            
+            if (subChannel !== "Verizon COR") {
+                valStr = safeGet(row, 'Elite', null); 
+                if (isValidForAverage(valStr)) { 
+                    sumElite += parsePercent(valStr); 
+                    countElite++; 
+                }
+            }
         });
 
         const calculatedRevAR = sumQtdTarget === 0 ? NaN : sumRevenue / sumQtdTarget;
-
         const avgConnectivity = countConnectivity > 0 ? sumConnectivity / countConnectivity : NaN;
         const avgRepSkill = countRepSkill > 0 ? sumRepSkill / countRepSkill : NaN;
         const avgPmr = countPmr > 0 ? sumPmr / countPmr : NaN;
         const avgPostTraining = countPostTraining > 0 ? sumPostTraining / countPostTraining : NaN;
-        const avgElite = countElite > 0 ? sumElite / countElite : NaN;
+        const avgElite = countElite > 0 ? sumElite / countElite : NaN; 
 
         const overallPercentStoreTarget = sumQuarterlyTarget !== 0 ? sumRevenue / sumQuarterlyTarget : NaN;
         const overallUnitAchievement = sumUnitTarget !== 0 ? sumUnits / sumUnitTarget : NaN;
@@ -582,7 +707,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (revARValue) { 
             revARValue.textContent = formatPercent(calculatedRevAR);
-            // Updated title as per Senpai's request
             revARValue.title = "Rev AR% for selected stores with data"; 
         }
 
@@ -593,12 +717,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (repSkillAchValue) { repSkillAchValue.textContent = formatPercent(avgRepSkill); repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with data`; }
         if (vPmrAchValue) { vPmrAchValue.textContent = formatPercent(avgPmr); vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with data`; }
         if (postTrainingScoreValue) { postTrainingScoreValue.textContent = isNaN(avgPostTraining) ? 'N/A' : avgPostTraining.toFixed(1); postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`; }
-        if (eliteValue) { eliteValue.textContent = formatPercent(avgElite); eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`; }
+        
+        if (eliteValue) { 
+            eliteValue.textContent = formatPercent(avgElite); 
+            eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data (excluding Verizon COR sub-channel)`;
+        }
         
         updateContextualSummary(data);
     };
 
     const updateContextualSummary = (data) => {
+        // ... (This function remains the same as our current version)
         [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
         if (data.length === 0) return;
 
@@ -641,6 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateCharts = (data) => {
+        // ... (This function remains the same as our current version)
         if (mainChartInstance) {
             mainChartInstance.destroy();
             mainChartInstance = null;
@@ -728,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateAttachRateTable = (data) => {
+        // ... (This function remains the same as our current version, without the old script's 'shouldShowRow' logic)
         if (!attachRateTableBody || !attachRateTableFooter) return;
         attachRateTableBody.innerHTML = '';
         attachRateTableFooter.innerHTML = '';
@@ -845,6 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleSort = (event) => {
+        // ... (This function remains the same as our current version)
          const headerCell = event.target.closest('th');
          if (!headerCell?.classList.contains('sortable')) return;
          const sortKey = headerCell.dataset.sort;
@@ -860,18 +992,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSortArrows = () => {
+        // ... (This function remains the same as our current version)
         if (!attachRateTable) return;
         attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => {
             arrow.className = 'sort-arrow';
             arrow.textContent = '';
         });
-        const currentHeaderArrow = attachRateTable.querySelector(`th[data-sort="${currentSort.column}"] .sort-arrow`);
+        const currentHeaderArrow = attachRateTable.querySelector(`th[data-sort="${CSS.escape(currentSort.column)}"] .sort-arrow`);
         if (currentHeaderArrow) {
             currentHeaderArrow.classList.add(currentSort.ascending ? 'asc' : 'desc');
         }
     };
 
     const showStoreDetails = (storeData) => {
+        // ... (This function remains the same as our current version with the corrected map link)
         if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
 
         const addressParts = [
@@ -884,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const longitude = parseNumber(safeGet(storeData, 'LONGITUDE_ORG', NaN));
         let mapsLinkHtml = `<p style="color: #aaa; font-style: italic;">(Map coordinates not available)</p>`;
         if (!isNaN(latitude) && !isNaN(longitude)) {
-            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`; // Retain our current corrected map link
             mapsLinkHtml = `<p><a href="${mapsUrl}" target="_blank" title="Open in Google Maps">View on Google Maps</a></p>`;
         }
 
@@ -914,9 +1048,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         storeDetailsSection.style.display = 'block';
         closeStoreDetailsButton.style.display = 'inline-block';
+        // Optional: storeDetailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
     const hideStoreDetails = () => {
+        // ... (This function remains the same as our current version)
         if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
         storeDetailsContent.innerHTML = 'Select a store from the table or chart for details, or apply filters resulting in a single store.';
         storeDetailsSection.style.display = 'none';
@@ -924,25 +1060,35 @@ document.addEventListener('DOMContentLoaded', () => {
         highlightTableRow(null);
     };
 
-     const highlightTableRow = (storeName) => {
-         if (selectedStoreRow) {
-             selectedStoreRow.classList.remove('selected-row');
-             selectedStoreRow = null;
-         }
-        if (storeName && attachRateTableBody) {
-             try {
-                 selectedStoreRow = attachRateTableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
-                 if (selectedStoreRow) {
-                     selectedStoreRow.classList.add('selected-row');
-                 }
-             } catch (e) {
-                 console.error("Error selecting table row:", e, "for storeName:", storeName);
-                 selectedStoreRow = null;
-             }
-         }
+    // ** UPDATED highlightTableRow to include Top/Bottom tables **
+    const highlightTableRow = (storeName) => {
+        if (selectedStoreRow) { 
+            selectedStoreRow.classList.remove('selected-row');
+            selectedStoreRow = null; 
+        }
+        if (storeName) {
+            // Add top5TableBody and bottom5TableBody to the list of tables to search
+            const tablesToSearch = [attachRateTableBody, top5TableBody, bottom5TableBody];
+            for (const tableBody of tablesToSearch) {
+                if (tableBody) { // Ensure the table body element exists
+                    try { 
+                        const rowToHighlight = tableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
+                        if (rowToHighlight) {
+                            rowToHighlight.classList.add('selected-row');
+                            selectedStoreRow = rowToHighlight;
+                            break; // Exit loop once row is found and highlighted
+                        }
+                    } catch (e) { 
+                        console.error("Error selecting table row in highlightTableRow:", e, "StoreName:", storeName, "Table:", tableBody);
+                        // Continue to next table if error or not found
+                    }
+                }
+            }
+        }
     };
 
     const exportData = () => {
+        // ... (This function remains largely the same as our current version)
         if (filteredData.length === 0) {
             alert("No filtered data to export.");
             return;
@@ -991,6 +1137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateEmailBody = () => {
+        // ... (This function remains largely the same as our current version, but ensure the Top/Bottom 5 data is also added if a single territory is selected)
         if (filteredData.length === 0) return "No data available based on current filters.";
         let body = "FSM Dashboard Summary:\n";
         body += "---------------------------------\n";
@@ -1001,8 +1148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`;
         body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
         body += `- QTD Gap: ${qtdGapValue?.textContent || 'N/A'}\n`;
-        // The revARValue.title is set in updateSummary, textContent will show the value.
-        // Adding context to the email body about the Rev AR% calculation here for clarity.
         body += `- Rev AR%: ${revARValue?.textContent || 'N/A'} (Calculated as: Total Revenue w/DF / Total QTD Revenue Target)\n`;
         body += `- % Store Quarterly Target: ${percentQuarterlyStoreTargetValue?.textContent || 'N/A'}\n`;
         body += `- Total Units (incl. DF): ${unitsWithDFValue?.textContent || 'N/A'}\n`;
@@ -1013,31 +1158,44 @@ document.addEventListener('DOMContentLoaded', () => {
         body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`;
         body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`;
         body += `- Post Training Score: ${postTrainingScoreValue?.textContent || 'N/A'}\n`;
-        body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'}\n\n`;
+        body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'} (Excludes Verizon COR sub-channel)\n\n`;
         body += "*Averages calculated only using stores with valid data for each metric.\n\n";
 
-         const sortedForEmail = [...filteredData].sort((a, b) => {
-             let valA = safeGet(a, currentSort.column, null); let valB = safeGet(b, currentSort.column, null);
-             if (valA === null && valB === null) return 0; if (valA === null) return currentSort.ascending ? -1 : 1; if (valB === null) return currentSort.ascending ? 1 : -1;
-             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%') || currentSort.column.includes('Target');
-             const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA); const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
-             if (!isNaN(numA) && !isNaN(numB)) return currentSort.ascending ? numA - numB : numB - numA;
-             valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
-         });
+        // ** ADD Top/Bottom 5 to email if single territory **
+        const territoriesInData = new Set(filteredData.map(row => safeGet(row, 'Q2 Territory', null)).filter(Boolean));
+        if (territoriesInData.size === 1) {
+            const territoryName = territoriesInData.values().next().value;
+            body += `--- Key Performers for Territory: ${territoryName} ---\n`;
+            
+            const top5ForEmail = [...filteredData]
+                .sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', -Infinity)) - parseNumber(safeGet(a, 'Revenue w/DF', -Infinity)))
+                .slice(0, TOP_N_TABLES);
+            if (top5ForEmail.length > 0) {
+                body += `Top ${top5ForEmail.length} (Revenue):\n`;
+                top5ForEmail.forEach((store, i) => { 
+                    body += `${i+1}. ${safeGet(store, 'Store')} - Rev: ${formatCurrency(parseNumber(safeGet(store, 'Revenue w/DF')))}\n`; 
+                });
+                body += "\n";
+            }
 
-        const topStores = sortedForEmail.slice(0, 5);
-        if (topStores.length > 0) {
-            body += `Top ${topStores.length} Stores (Sorted by ${currentSort.column} ${currentSort.ascending ? 'ASC' : 'DESC'}):\n`;
-            topStores.forEach((store, index) => {
-                 body += `${index + 1}. ${safeGet(store, 'Store', 'N/A')} (% Qtr Rev: ${formatPercent(parsePercent(safeGet(store, '% Quarterly Revenue Target', 0)))}, NCME: ${formatPercent(parsePercent(safeGet(store, 'NCME Attach Rate', 0)))}) \n`;
-            });
-             body += "\n";
+            const bottom5ForEmail = [...filteredData]
+                .sort((a, b) => calculateQtdGap(a) - calculateQtdGap(b))
+                .slice(0, TOP_N_TABLES);
+            if (bottom5ForEmail.length > 0) {
+                body += `Bottom ${bottom5ForEmail.length} (Opportunities by QTD Gap):\n`;
+                bottom5ForEmail.forEach((store, i) => { 
+                    body += `${i+1}. ${safeGet(store, 'Store')} - Gap: ${formatCurrency(calculateQtdGap(store) === Infinity ? NaN : calculateQtdGap(store))}\n`; 
+                });
+                body += "\n";
+            }
         }
+        
         body += "---------------------------------\nGenerated by FSM Dashboard\n";
         return body;
     };
 
     const getFilterSummary = () => {
+        // ... (This function remains the same as our current version)
         let summary = [];
         if (regionFilter?.value !== 'ALL') summary.push(`Region: ${regionFilter.value}`);
         if (districtFilter?.value !== 'ALL') summary.push(`District: ${districtFilter.value}`);
@@ -1055,6 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleShareEmail = () => {
+        // ... (This function remains the same as our current version)
         if (!emailRecipientInput || !shareStatus) return;
         const recipient = emailRecipientInput.value;
         if (!recipient || !/\S+@\S+\.\S+/.test(recipient)) {
@@ -1079,18 +1238,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
      const selectAllOptions = (selectElement) => {
+        // ... (This function remains the same as our current version)
          if (!selectElement) return;
          Array.from(selectElement.options).forEach(option => option.selected = true);
          if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
     };
 
      const deselectAllOptions = (selectElement) => {
+        // ... (This function remains the same as our current version)
          if (!selectElement) return;
          selectElement.selectedIndex = -1;
          if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
     };
 
     // --- Event Listeners ---
+    // ... (This section remains the same as our current version)
     excelFileInput?.addEventListener('change', handleFile);
     applyFiltersButton?.addEventListener('click', applyFilters);
     storeSearch?.addEventListener('input', filterStoreOptions);
