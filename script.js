@@ -1,234 +1,1126 @@
-/*
-    Timestamp: 2025-05-08T21:15:26EDT
-    Summary: Proofread for consistency and best practices. No major functional changes.
-*/
-/* --- Global Resets & Body (Dark Mode) --- */
-*, *::before, *::after { box-sizing: border-box; }
-body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    margin: 0;
-    padding: 0;
-    background-color: #1e1e1e; /* Dark background */
-    color: #e0e0e0; /* Light text */
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-.container { max-width: 1400px; margin: 0 auto; padding: 10px; } /* Wider container */
+//
+//    Timestamp: 2025-05-08T22:17:56EDT
+//    Summary: Modified 'Rev AR%' calculation in updateSummary to be sum of 'Revenue w/DF' / sum of 'QTD Revenue Target'.
+//
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Configuration ---
+    const REQUIRED_HEADERS = [ // Add all essential headers needed for calculations/display
+        'Store', 'REGION', 'DISTRICT', 'Q2 Territory', 'FSM NAME', 'CHANNEL',
+        'SUB_CHANNEL', 'DEALER_NAME', 'Revenue w/DF', 'QTD Revenue Target',
+        'Quarterly Revenue Target', 'QTD Gap', '% Quarterly Revenue Target', 'Rev AR%',
+        'Unit w/ DF', 'Unit Target', 'Unit Achievement', 'Visit count', 'Trainings',
+        'Retail Mode Connectivity', 'Rep Skill Ach', '(V)PMR Ach', 'Elite', 'Post Training Score',
+        'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate', 'TWS Attach Rate',
+        'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate', 'SUPER STORE', 'GOLDEN RHINO',
+        'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE',
+        // Store Details Headers:
+        'STORE ID', 'ADDRESS1', 'CITY', 'STATE', 'ZIPCODE',
+        'LATITUDE_ORG', 'LONGITUDE_ORG', // For Google Maps
+        'ORG_STORE_ID', 'CV_STORE_ID', 'CINGLEPOINT_ID', // Additional IDs
+        'STORE_TYPE_NAME', 'National_Tier', 'Merchandising_Level', 'Combined_Tier', // Store Type/Tier info
+        // Context headers if needed for display/logic
+        '%Quarterly Territory Rev Target', 'Region Rev%', 'District Rev%', 'Territory Rev%'
+    ];
+    const FLAG_HEADERS = ['SUPER STORE', 'GOLDEN RHINO', 'GCE', 'AI_Zone', 'Hispanic_Market', 'EV ROUTE']; // Used for Flag summary in details
+    const CURRENCY_FORMAT = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const PERCENT_FORMAT = new Intl.NumberFormat('en-US', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const NUMBER_FORMAT = new Intl.NumberFormat('en-US');
+    const CHART_COLORS = ['#58a6ff', '#ffb758', '#86dc86', '#ff7f7f', '#b796e6', '#ffda8a', '#8ad7ff', '#ff9ba6'];
+    const TOP_N_CHART = 15; // Max items to show on the bar chart
 
-/* --- Headings (Dark Mode) --- */
-h1 { color: #58a6ff; text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-weight: 600; font-size: 1.8rem; }
-h2 { color: #77b6ff; text-align: center; margin-top: 0; margin-bottom: 1rem; font-weight: 500; font-size: 1.4rem; border-bottom: 1px solid #444; padding-bottom: 0.5rem; }
-h3 { margin-top: 0; margin-bottom: 1rem; color: #58a6ff; font-weight: 500; font-size: 1.15rem; text-align: center; }
+    // --- DOM Elements ---
+    const excelFileInput = document.getElementById('excelFile');
+    const statusDiv = document.getElementById('status');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const filterLoadingIndicator = document.getElementById('filterLoadingIndicator');
+    const filterArea = document.getElementById('filterArea');
+    const resultsArea = document.getElementById('resultsArea');
+    const applyFiltersButton = document.getElementById('applyFiltersButton');
 
-/* --- Upload Instructions Style --- */
-.upload-instructions {
-    text-align: center;
-    color: #a0a0a0;
-    margin-top: -0.5rem;
-    margin-bottom: 1.5rem;
-    padding: 0 10px;
-}
+    // Filter Elements
+    const regionFilter = document.getElementById('regionFilter');
+    const districtFilter = document.getElementById('districtFilter');
+    const territoryFilter = document.getElementById('territoryFilter');
+    const fsmFilter = document.getElementById('fsmFilter');
+    const channelFilter = document.getElementById('channelFilter');
+    const subchannelFilter = document.getElementById('subchannelFilter');
+    const dealerFilter = document.getElementById('dealerFilter');
+    const storeFilter = document.getElementById('storeFilter');
+    const storeSearch = document.getElementById('storeSearch');
 
-/* --- Card Styling (Dark Mode) --- */
-.card {
-    background-color: #2c2c2c;
-    border: 1px solid #444;
-    border-radius: 0.25rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    padding: 1rem;
-    margin: 1rem auto;
-    width: auto;
-    margin-left: 10px;
-    margin-right: 10px;
-}
+    const flagFiltersCheckboxes = FLAG_HEADERS.reduce((acc, header) => {
+        let expectedId = '';
+        switch (header) {
+            case 'SUPER STORE':       expectedId = 'superStoreFilter'; break;
+            case 'GOLDEN RHINO':      expectedId = 'goldenRhinoFilter'; break;
+            case 'GCE':               expectedId = 'gceFilter'; break;
+            case 'AI_Zone':           expectedId = 'aiZoneFilter'; break;
+            case 'Hispanic_Market':   expectedId = 'hispanicMarketFilter'; break;
+            case 'EV ROUTE':          expectedId = 'evRouteFilter'; break;
+            default:
+                console.warn(`Unknown flag header encountered during mapping: ${header}`);
+                return acc;
+        }
+        const element = document.getElementById(expectedId);
+        if (element) {
+            acc[header] = element;
+        } else {
+            console.warn(`Flag filter checkbox not found for ID: ${expectedId} (Header: ${header}) upon initial mapping. Check HTML.`);
+        }
+        return acc;
+    }, {});
 
-/* --- Input Area & Loading Indicator --- */
-.input-area { text-align: center; max-width: 600px; }
-.input-area label { display: block; margin-bottom: 0.5rem; margin-right: 0; font-weight: 600; color: #c0c0c0; }
-#excelFile { border: 1px solid #555; padding: 0.5rem 0.75rem; border-radius: 0.25rem; cursor: pointer; width: 100%; max-width: 350px; background-color: #333; color: #e0e0e0; }
-#excelFile::file-selector-button { padding: 0.5rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; background-color: #444; color: #e0e0e0; cursor: pointer; margin-right: 0.5rem; }
-#status.status-message { /* More specific selector for the status paragraph */
-    margin-top: 1rem; /* Increased top margin for better separation */
-    margin-bottom: 1rem; /* Added bottom margin */
-    font-style: italic;
-    color: #a0a0a0;
-    text-align: center;
-    min-height: 1.5em;
-    padding: 0 10px;
-}
-#loadingIndicator, #filterLoadingIndicator { color: #99ccff; margin-top: 0.75rem; font-size: 0.9em; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.spinner { border: 4px solid rgba(153, 204, 255, 0.3); border-radius: 50%; border-top: 4px solid #99ccff; width: 20px; height: 20px; animation: spin 1s linear infinite; }
-.spinner-small { border: 3px solid rgba(153, 204, 255, 0.3); border-radius: 50%; border-top: 3px solid #99ccff; width: 16px; height: 16px; animation: spin 1s linear infinite; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    const territorySelectAll = document.getElementById('territorySelectAll');
+    const territoryDeselectAll = document.getElementById('territoryDeselectAll');
+    const storeSelectAll = document.getElementById('storeSelectAll');
+    const storeDeselectAll = document.getElementById('storeDeselectAll');
 
-/* --- Filter Controls (Dark Mode) --- */
-#filterArea { max-width: 1200px; }
-.filter-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem 1.5rem; margin-bottom: 1.5rem; }
-.filter-group { display: flex; flex-direction: column; gap: 0.3rem; }
-.filter-group label, .flags-label { font-weight: 600; color: #c0c0c0; margin-bottom: 0; width: auto; text-align: left; font-size: 0.95em; }
-.filter-group select, .filter-group input[type="text"] { padding: 0.6rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; min-width: 0; width: 100%; background-color: #333; color: #e0e0e0; font-size: 0.9rem; }
-.filter-group select[multiple] { padding: 0.5rem; height: auto; min-height: 100px; font-size: 0.85rem; }
-.filter-group select:disabled, .filter-group input:disabled, .filter-group button:disabled, .filter-group-flags input:disabled { background-color: #444 !important; cursor: not-allowed !important; color: #888 !important; border-color: #555 !important; opacity: 0.6; }
-.filter-group select option { background-color: #333; color: #e0e0e0; }
-.multi-select-info { font-size: 0.75em; color: #999; margin-top: -2px; margin-bottom: 2px; display: block; text-align: left; }
-.multi-select-controls { display: flex; gap: 0.5rem; margin-bottom: 0.3rem; }
-.select-button { padding: 0.2rem 0.5rem; font-size: 0.75em; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 3px; cursor: pointer; }
-.select-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
-#storeSearch { margin-bottom: 0.3rem; }
-.filter-group-store { grid-column: span 2; /* Make store filter wider if needed */ }
+    // Summary Elements
+    const revenueWithDFValue = document.getElementById('revenueWithDFValue');
+    const qtdRevenueTargetValue = document.getElementById('qtdRevenueTargetValue');
+    const qtdGapValue = document.getElementById('qtdGapValue');
+    const quarterlyRevenueTargetValue = document.getElementById('quarterlyRevenueTargetValue');
+    const percentQuarterlyStoreTargetValue = document.getElementById('percentQuarterlyStoreTargetValue');
+    const revARValue = document.getElementById('revARValue'); // This is the element we'll update
+    const unitsWithDFValue = document.getElementById('unitsWithDFValue');
+    const unitTargetValue = document.getElementById('unitTargetValue');
+    const unitAchievementValue = document.getElementById('unitAchievementValue');
+    const visitCountValue = document.getElementById('visitCountValue');
+    const trainingCountValue = document.getElementById('trainingCountValue');
+    const retailModeConnectivityValue = document.getElementById('retailModeConnectivityValue');
+    const repSkillAchValue = document.getElementById('repSkillAchValue');
+    const vPmrAchValue = document.getElementById('vPmrAchValue');
+    const postTrainingScoreValue = document.getElementById('postTrainingScoreValue');
+    const eliteValue = document.getElementById('eliteValue');
+    const percentQuarterlyTerritoryTargetP = document.getElementById('percentQuarterlyTerritoryTargetP');
+    const territoryRevPercentP = document.getElementById('territoryRevPercentP');
+    const districtRevPercentP = document.getElementById('districtRevPercentP');
+    const regionRevPercentP = document.getElementById('regionRevPercentP');
+    const percentQuarterlyTerritoryTargetValue = document.getElementById('percentQuarterlyTerritoryTargetValue');
+    const territoryRevPercentValue = document.getElementById('territoryRevPercentValue');
+    const districtRevPercentValue = document.getElementById('districtRevPercentValue');
+    const regionRevPercentValue = document.getElementById('regionRevPercentValue');
 
-/* --- Flag Filters --- */
-.filter-group-flags { grid-column: 1 / -1; /* Span full width */ margin-top: 0.5rem; }
-.flags-label { margin-bottom: 0.5rem; display: block; }
-.flag-toggles { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; background-color: #333; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; }
-.flag-toggles label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9em; color: #ccc; cursor: pointer; }
-.flag-toggles input[type="checkbox"] { width: 16px; height: 16px; accent-color: #58a6ff; cursor: pointer; margin: 0; }
-.flag-toggles label:has(input:disabled) { cursor: not-allowed; color: #888; }
+    // Table Elements
+    const attachRateTableBody = document.getElementById('attachRateTableBody');
+    const attachRateTableFooter = document.getElementById('attachRateTableFooter');
+    const attachTableStatus = document.getElementById('attachTableStatus');
+    const attachRateTable = document.getElementById('attachRateTable');
+    const exportCsvButton = document.getElementById('exportCsvButton');
 
+    // Chart Elements
+    const mainChartCanvas = document.getElementById('mainChartCanvas')?.getContext('2d');
 
-.apply-filters-button {
-    display: block;
-    width: 100%;
-    max-width: 250px;
-    margin: 1rem auto 0 auto;
-    padding: 0.7rem 1rem;
-    background-color: #3081d2;
-    color: #ffffff;
-    border: none;
-    border-radius: 0.25rem;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-.apply-filters-button:hover:not(:disabled) { background-color: #58a6ff; }
+    // Store Details Elements
+    const storeDetailsSection = document.getElementById('storeDetailsSection');
+    const storeDetailsContent = document.getElementById('storeDetailsContent');
+    const closeStoreDetailsButton = document.getElementById('closeStoreDetailsButton');
 
-/* --- Results Area --- */
-.results-container { margin-top: 1.5rem; }
+    // Share Elements
+    const emailRecipientInput = document.getElementById('emailRecipient');
+    const shareEmailButton = document.getElementById('shareEmailButton');
+    const shareStatus = document.getElementById('shareStatus');
 
-/* --- Store Details Container --- */
-.store-details-container { max-width: 95%; position: relative; } /* Allow more width */
-#storeDetailsContent { font-size: 0.9rem; text-align: left; color: #d0d0d0; line-height: 1.6; max-height: 400px; overflow-y: auto; padding-right: 10px; /* For scrollbar */}
-#storeDetailsContent p { margin-bottom: 0.5rem; }
-#storeDetailsContent strong { color: #e5e5e5; margin-right: 5px; }
-#storeDetailsContent hr { border: none; border-top: 1px solid #444; margin: 0.75rem 0; }
-#storeDetailsContent span[data-flag="true"] { color: #86dc86; font-weight: bold; }
-#storeDetailsContent span[data-flag="false"] { color: #aaa; }
-.close-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #555;
-    color: #eee;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    font-size: 16px;
-    line-height: 22px;
-    text-align: center;
-    cursor: pointer;
-    font-weight: bold;
-}
-.close-button:hover { background: #777; }
+    // --- Global State ---
+    let rawData = [];
+    let filteredData = [];
+    let mainChartInstance = null;
+    let storeOptions = [];
+    let allPossibleStores = [];
+    let currentSort = { column: 'Store', ascending: true };
+    let selectedStoreRow = null;
 
+    // --- Helper Functions ---
+    const formatCurrency = (value) => isNaN(value) ? 'N/A' : CURRENCY_FORMAT.format(value);
+    const formatPercent = (value) => isNaN(value) ? 'N/A' : PERCENT_FORMAT.format(value);
+    const formatNumber = (value) => isNaN(value) ? 'N/A' : NUMBER_FORMAT.format(value);
 
-/* --- Summary & Stat Containers (Dark Mode) --- */
-.summary-container, .rep-pmr-container, .training-stats-container { max-width: 100%; }
-.summary-container { margin-top: 1rem; } /* Adjust spacing */
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Responsive grid */
-    gap: 0.6rem 1.5rem; /* Row and column gap */
-    text-align: left;
-    padding-left: 0;
-}
-.summary-grid p { margin: 0; font-size: 0.95rem; color: #d0d0d0; }
-.summary-grid p strong { font-weight: 600; color: #f0f0f0; margin-left: 5px; }
-.summary-grid p[style*="display: none"] { display: none !important; } /* Ensure hidden items stay hidden */
-.summary-container span[style*="background-color"] { color: #111; padding: 2px 5px; border-radius: 3px; font-weight: 500; } /* For potential future use */
+    const parseNumber = (value) => {
+        if (value === null || value === undefined || String(value).trim() === '') return NaN;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+            const numStr = value.replace(/[$,%]/g, '');
+            const num = parseFloat(numStr);
+            return isNaN(num) ? NaN : num;
+        }
+        return NaN;
+    };
+    const parsePercent = (value) => {
+         if (value === null || value === undefined || String(value).trim() === '') return NaN;
+         if (typeof value === 'number') return value;
+         if (typeof value === 'string') {
+            const numStr = value.replace('%', '');
+            const num = parseFloat(numStr);
+            return isNaN(num) ? NaN : num / 100;
+         }
+         return NaN;
+    };
+    const safeGet = (obj, path, defaultValue = 'N/A') => {
+        const value = obj ? obj[path] : undefined;
+        return (value !== undefined && value !== null && String(value).trim() !== '') ? value : defaultValue;
+    };
+    const isValidForAverage = (value) => {
+         if (value === null || value === undefined || String(value).trim() === '') return false;
+         return !isNaN(parseNumber(String(value).replace('%','')));
+    };
+    const getUniqueValues = (data, column) => {
+        const values = new Set(data.map(item => safeGet(item, column, '')).filter(val => String(val).trim() !== ''));
+        return ['ALL', ...Array.from(values).sort()];
+    };
+    const setOptions = (selectElement, options, disable = false) => {
+        if (!selectElement) return;
+        selectElement.innerHTML = '';
+        options.forEach(optionValue => {
+            const option = document.createElement('option');
+            option.value = optionValue;
+            option.textContent = optionValue === 'ALL' ? `-- ${optionValue} --` : optionValue;
+            option.title = optionValue;
+            selectElement.appendChild(option);
+        });
+         selectElement.disabled = disable;
+    };
+    const setMultiSelectOptions = (selectElement, options, disable = false) => {
+        if (!selectElement) return;
+        selectElement.innerHTML = '';
+        options.forEach(optionValue => {
+             if (optionValue === 'ALL') return;
+             const option = document.createElement('option');
+             option.value = optionValue;
+             option.textContent = optionValue;
+             option.title = optionValue;
+             selectElement.appendChild(option);
+         });
+         selectElement.disabled = disable;
+    };
+    const showLoading = (isLoading, isFiltering = false) => {
+        const displayStyle = isLoading ? 'flex' : 'none';
+        if (isFiltering) {
+            if (filterLoadingIndicator) filterLoadingIndicator.style.display = displayStyle;
+            if (applyFiltersButton) applyFiltersButton.disabled = isLoading;
+        } else {
+            if (loadingIndicator) loadingIndicator.style.display = displayStyle;
+            if (excelFileInput) excelFileInput.disabled = isLoading;
+        }
+    };
 
-.stats-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-.rep-pmr-container, .training-stats-container {
-    flex: 1 1 300px; /* Allow flex grow/shrink, base width 300px */
-    max-width: none; /* Remove max-width from individual cards */
-}
-.rep-pmr-container p, .training-stats-container p { margin-bottom: 0.5rem; font-size: 0.95rem; text-align: left; padding-left: 0; color: #d0d0d0; }
-.rep-pmr-container p:last-child, .training-stats-container p:last-child { margin-bottom: 0; }
-.rep-pmr-container strong, .training-stats-container strong { font-weight: 600; color: #f0f0f0; }
+    // --- Core Functions ---
+    const handleFile = async (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            if (statusDiv) statusDiv.textContent = 'No file selected.';
+            return;
+        }
+        if (statusDiv) statusDiv.textContent = 'Reading file...';
+        showLoading(true);
+        if (filterArea) filterArea.style.display = 'none';
+        if (resultsArea) resultsArea.style.display = 'none';
+        resetUI(); // Full reset before loading new file data
 
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: null });
 
-/* --- Chart Container (Dark Mode) --- */
-.chart-container { height: 350px; max-width: 95%; /* Wider */ background-color: #2c2c2c; }
-#mainChartCanvas, #secondaryChartCanvas { width: 100% !important; height: 100% !important; }
+            if (jsonData.length > 0) {
+                const headers = Object.keys(jsonData[0]);
+                const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
+                if (missingHeaders.length > 0) {
+                    console.warn(`Warning: Missing expected columns: ${missingHeaders.join(', ')}. Some features might not work correctly.`);
+                }
+            } else {
+                throw new Error("Excel sheet appears to be empty.");
+            }
 
-/* --- Table Container & Table (Dark Mode) --- */
-.table-container { max-width: 95%; /* Wider */ }
-.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px; }
-.table-header h2 { margin: 0; font-size: 1.2rem; text-align: left; }
-.export-button { padding: 0.4rem 0.8rem; background-color: #4a4a4a; color: #ccc; border: 1px solid #666; border-radius: 4px; font-size: 0.85em; cursor: pointer; }
-.export-button:hover:not(:disabled) { background-color: #5a5a5a; color: #eee; }
-.table-wrapper { overflow-x: auto; margin-top: 0.75rem; }
-#attachRateTable { width: 100%; border-collapse: collapse; margin-top: 0; font-size: 0.85rem; }
-#attachRateTable th, #attachRateTable td { border: 1px solid #555; padding: 0.5rem 0.75rem; text-align: left; white-space: nowrap; color: #d0d0d0; }
-#attachRateTable th { background-color: #3a3a3a; font-weight: 600; color: #f0f0f0; position: sticky; top: 0; z-index: 1; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem; cursor: pointer; user-select: none; }
-#attachRateTable th:hover { background-color: #4a4a4a; }
-#attachRateTable tbody tr { background-color: #2c2c2c; cursor: pointer; } /* Add cursor pointer */
-#attachRateTable tbody tr:hover { background-color: #383838; }
-#attachRateTable tbody tr.selected-row { background-color: #405d7a !important; /* Highlight selected row */ color: #fff; }
-#attachRateTable td:not(:first-child):not(:nth-child(2)) { text-align: right; } /* Right-align numerical columns, except % target */
-#attachRateTable tfoot tr { background-color: #333; font-weight: bold; color: #eee; }
-#attachRateTable tfoot td { border-top: 2px solid #666; }
+            rawData = jsonData;
+            allPossibleStores = [...new Set(rawData.map(r => safeGet(r, 'Store', null)).filter(s => s && String(s).trim() !== ''))]
+                                 .sort()
+                                 .map(s => ({ value: s, text: s }));
+            if (statusDiv) statusDiv.textContent = `Loaded ${rawData.length} rows. Adjust filters and click 'Apply Filters'.`;
+            populateFilters(rawData);
+            if (filterArea) filterArea.style.display = 'block';
 
-.highlight-green { background-color: rgba(42, 74, 42, 0.7) !important; color: #b0ffb0; }
-.highlight-red { background-color: rgba(90, 42, 42, 0.7) !important; color: #ffb0b0; }
-.sort-arrow { display: inline-block; width: 12px; height: 12px; margin-left: 5px; opacity: 0.5; vertical-align: middle; }
-.sort-arrow.asc::after { content: '▲'; font-size: 0.8em; }
-.sort-arrow.desc::after { content: '▼'; font-size: 0.8em; }
-#attachTableStatus { margin-top: 0.75rem; color: #a0a0a0; font-size: 0.85rem; text-align: center; }
+        } catch (error) {
+            console.error('Error processing file:', error);
+            if (statusDiv) statusDiv.textContent = `Error: ${error.message}`;
+            rawData = [];
+            allPossibleStores = []; // Ensure cleared on error
+            filteredData = [];
+            resetUI(); // Call resetUI again to ensure clean state after error
+        } finally {
+            showLoading(false);
+            if (excelFileInput) excelFileInput.value = '';
+        }
+    };
 
-/* --- Share Section (Dark Mode) --- */
-.share-container { max-width: 600px; }
-.share-controls { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
-.share-controls label { font-weight: 600; color: #c0c0c0; margin-bottom: 0.25rem; }
-.share-controls input[type="email"] { padding: 0.6rem 0.75rem; border: 1px solid #555; border-radius: 0.25rem; flex-grow: 1; background-color: #333; color: #e0e0e0; }
-.share-controls button { padding: 0.6rem 1rem; background-color: #3081d2; color: #ffffff; border: none; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
-.share-controls button:hover { background-color: #58a6ff; }
-.share-status { margin-top: 0.5rem; font-style: italic; color: #77b6ff; min-height: 1.2em; }
-.share-note { font-size: 0.85rem; color: #a0a0a0; margin-top: 1rem; text-align: center; }
+    const populateFilters = (data) => {
+        setOptions(regionFilter, getUniqueValues(data, 'REGION'));
+        setOptions(districtFilter, getUniqueValues(data, 'DISTRICT'));
+        setMultiSelectOptions(territoryFilter, getUniqueValues(data, 'Q2 Territory').slice(1));
+        setOptions(fsmFilter, getUniqueValues(data, 'FSM NAME'));
+        setOptions(channelFilter, getUniqueValues(data, 'CHANNEL'));
+        setOptions(subchannelFilter, getUniqueValues(data, 'SUB_CHANNEL'));
+        setOptions(dealerFilter, getUniqueValues(data, 'DEALER_NAME'));
 
+        Object.values(flagFiltersCheckboxes).forEach(input => { if(input) input.disabled = false; });
 
-/* --- MEDIA QUERIES --- */
-@media (min-width: 768px) { /* Adjusted breakpoint */
-    .container { padding: 15px; }
-    .input-area label { display: inline-block; margin-bottom: 0; }
-    #excelFile { width: auto; max-width: 350px; }
-    .summary-grid p { font-size: 1rem; }
-    .rep-pmr-container p, .training-stats-container p { font-size: 1rem; }
-    .chart-container { height: 400px; }
-    #attachRateTable { font-size: 0.9rem; }
-    #attachRateTable th, #attachRateTable td { padding: 0.6rem 0.8rem; } /* Slightly adjust padding */
-    #attachRateTable th { font-size: 0.85rem; }
-    .share-controls { flex-direction: row; align-items: center; }
-    .share-controls label { margin-bottom: 0; }
-    .filter-group-store { grid-column: span 1; /* Reset span */ }
-}
+        storeOptions = [...allPossibleStores];
+        setStoreFilterOptions(storeOptions, false);
 
-@media (min-width: 1200px) { /* Adjusted breakpoint */
-    h1 { font-size: 2rem; margin-bottom: 2rem; }
-    h2 { font-size: 1.5rem; margin-bottom: 1.5rem; }
-    h3 { font-size: 1.25rem; }
-    .card { padding: 1.5rem; margin: 1.5rem auto; }
-    .filter-controls { gap: 1.2rem 2rem; }
-    .chart-container { height: 450px; }
-    #attachRateTable { font-size: 0.9rem; }
-    #attachRateTable th { font-size: 0.9rem; }
-    #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
-    .filter-group-store { grid-column: span 2; /* Span 2 columns on larger screens */ }
-}
+        if (territorySelectAll) territorySelectAll.disabled = false;
+        if (territoryDeselectAll) territoryDeselectAll.disabled = false;
+        if (storeSelectAll) storeSelectAll.disabled = false;
+        if (storeDeselectAll) storeDeselectAll.disabled = false;
+        if (storeSearch) storeSearch.disabled = false;
+        if (applyFiltersButton) applyFiltersButton.disabled = false;
+
+        addDependencyFilterListeners();
+    };
+
+    const addDependencyFilterListeners = () => {
+        const handler = updateStoreFilterOptionsBasedOnHierarchy;
+        const filtersToListen = [regionFilter, districtFilter, territoryFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter];
+        
+        filtersToListen.forEach(filter => {
+            if (filter) {
+                filter.removeEventListener('change', handler);
+                filter.addEventListener('change', handler);
+            }
+        });
+        Object.values(flagFiltersCheckboxes).forEach(input => {
+             if (input) {
+                 input.removeEventListener('change', handler);
+                 input.addEventListener('change', handler);
+             }
+        });
+    };
+
+     const updateStoreFilterOptionsBasedOnHierarchy = () => {
+        if (rawData.length === 0) return;
+
+        const selectedRegion = regionFilter?.value;
+        const selectedDistrict = districtFilter?.value;
+        const selectedTerritories = territoryFilter ? Array.from(territoryFilter.selectedOptions).map(opt => opt.value) : [];
+        const selectedFsm = fsmFilter?.value;
+        const selectedChannel = channelFilter?.value;
+        const selectedSubchannel = subchannelFilter?.value;
+        const selectedDealer = dealerFilter?.value;
+        const selectedFlags = {};
+        Object.entries(flagFiltersCheckboxes).forEach(([key, input]) => {
+             if (input?.checked) {
+                 selectedFlags[key] = true;
+             }
+         });
+
+        const potentiallyValidStoresData = rawData.filter(row => {
+            if (selectedRegion !== 'ALL' && safeGet(row, 'REGION', null) !== selectedRegion) return false;
+            if (selectedDistrict !== 'ALL' && safeGet(row, 'DISTRICT', null) !== selectedDistrict) return false;
+            if (selectedTerritories.length > 0 && !selectedTerritories.includes(safeGet(row, 'Q2 Territory', null))) return false;
+            if (selectedFsm !== 'ALL' && safeGet(row, 'FSM NAME', null) !== selectedFsm) return false;
+            if (selectedChannel !== 'ALL' && safeGet(row, 'CHANNEL', null) !== selectedChannel) return false;
+            if (selectedSubchannel !== 'ALL' && safeGet(row, 'SUB_CHANNEL', null) !== selectedSubchannel) return false;
+            if (selectedDealer !== 'ALL' && safeGet(row, 'DEALER_NAME', null) !== selectedDealer) return false;
+
+            for (const flag in selectedFlags) {
+                const flagValue = safeGet(row, flag, 'NO');
+                if (!(flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1')) {
+                   return false;
+                }
+            }
+            return true;
+        });
+
+        const validStoreNames = new Set(potentiallyValidStoresData.map(row => safeGet(row, 'Store', null)).filter(s => s && String(s).trim() !== ''));
+        storeOptions = Array.from(validStoreNames).sort().map(s => ({ value: s, text: s }));
+
+        const previouslySelectedStores = storeFilter ? new Set(Array.from(storeFilter.selectedOptions).map(opt => opt.value)) : new Set();
+
+        setStoreFilterOptions(storeOptions, false);
+        filterStoreOptions(); 
+
+        if (storeFilter) {
+            Array.from(storeFilter.options).forEach(option => {
+                if (previouslySelectedStores.has(option.value)) {
+                    option.selected = true;
+                }
+            });
+            if (storeFilter.selectedOptions.length === 0) {
+                 storeFilter.selectedIndex = -1;
+            }
+        }
+    };
+
+    const setStoreFilterOptions = (optionsToShow, disable = true) => {
+        if (!storeFilter) return;
+        const currentSearchTerm = storeSearch?.value || '';
+        storeFilter.innerHTML = '';
+        optionsToShow.forEach(opt => {
+             const option = document.createElement('option');
+             option.value = opt.value;
+             option.textContent = opt.text;
+             option.title = opt.text;
+             storeFilter.appendChild(option);
+         });
+         storeFilter.disabled = disable;
+         if (storeSearch) storeSearch.disabled = disable;
+         if (storeSelectAll) storeSelectAll.disabled = disable || optionsToShow.length === 0;
+         if (storeDeselectAll) storeDeselectAll.disabled = disable || optionsToShow.length === 0;
+         if (storeSearch) storeSearch.value = currentSearchTerm;
+    };
+
+    const filterStoreOptions = () => {
+        if (!storeFilter || !storeSearch) return;
+        const searchTerm = storeSearch.value.toLowerCase();
+        const filteredOptions = storeOptions.filter(opt => opt.text.toLowerCase().includes(searchTerm));
+        const selectedValues = new Set(Array.from(storeFilter.selectedOptions).map(opt => opt.value));
+
+        storeFilter.innerHTML = '';
+        filteredOptions.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.text;
+            option.title = opt.text;
+             if (selectedValues.has(opt.value)) {
+                 option.selected = true;
+             }
+            storeFilter.appendChild(option);
+        });
+
+        if (storeSelectAll) storeSelectAll.disabled = storeFilter.disabled || filteredOptions.length === 0;
+        if (storeDeselectAll) storeDeselectAll.disabled = storeFilter.disabled || filteredOptions.length === 0;
+    };
+
+    const applyFilters = () => {
+        showLoading(true, true);
+        if (resultsArea) resultsArea.style.display = 'none';
+
+        setTimeout(() => {
+            try {
+                const selectedRegion = regionFilter?.value;
+                const selectedDistrict = districtFilter?.value;
+                const selectedTerritories = territoryFilter ? Array.from(territoryFilter.selectedOptions).map(opt => opt.value) : [];
+                const selectedFsm = fsmFilter?.value;
+                const selectedChannel = channelFilter?.value;
+                const selectedSubchannel = subchannelFilter?.value;
+                const selectedDealer = dealerFilter?.value;
+                const selectedStores = storeFilter ? Array.from(storeFilter.selectedOptions).map(opt => opt.value) : [];
+                const selectedFlags = {};
+                 Object.entries(flagFiltersCheckboxes).forEach(([key, input]) => {
+                     if (input?.checked) {
+                         selectedFlags[key] = true;
+                     }
+                 });
+
+                filteredData = rawData.filter(row => {
+                    if (selectedRegion !== 'ALL' && safeGet(row, 'REGION', null) !== selectedRegion) return false;
+                    if (selectedDistrict !== 'ALL' && safeGet(row, 'DISTRICT', null) !== selectedDistrict) return false;
+                    if (selectedTerritories.length > 0 && !selectedTerritories.includes(safeGet(row, 'Q2 Territory', null))) return false;
+                    if (selectedFsm !== 'ALL' && safeGet(row, 'FSM NAME', null) !== selectedFsm) return false;
+                    if (selectedChannel !== 'ALL' && safeGet(row, 'CHANNEL', null) !== selectedChannel) return false;
+                    if (selectedSubchannel !== 'ALL' && safeGet(row, 'SUB_CHANNEL', null) !== selectedSubchannel) return false;
+                    if (selectedDealer !== 'ALL' && safeGet(row, 'DEALER_NAME', null) !== selectedDealer) return false;
+                    if (selectedStores.length > 0 && !selectedStores.includes(safeGet(row, 'Store', null))) return false;
+
+                    for (const flag in selectedFlags) {
+                        const flagValue = safeGet(row, flag, 'NO');
+                        if (!(flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1')) {
+                           return false;
+                        }
+                    }
+                    return true;
+                });
+
+                updateSummary(filteredData);
+                updateCharts(filteredData);
+                updateAttachRateTable(filteredData);
+
+                if (filteredData.length === 1) {
+                    showStoreDetails(filteredData[0]);
+                    highlightTableRow(safeGet(filteredData[0], 'Store', null));
+                } else {
+                    hideStoreDetails();
+                }
+
+                if (statusDiv) statusDiv.textContent = `Displaying ${filteredData.length} of ${rawData.length} rows based on filters.`;
+                if (resultsArea) resultsArea.style.display = 'block';
+                if (exportCsvButton) exportCsvButton.disabled = filteredData.length === 0;
+
+            } catch (error) {
+                console.error("Error applying filters:", error);
+                if (statusDiv) statusDiv.textContent = "Error applying filters. Check console for details.";
+                filteredData = [];
+                if (resultsArea) resultsArea.style.display = 'none';
+                if (exportCsvButton) exportCsvButton.disabled = true;
+                updateSummary([]);
+                updateCharts([]);
+                updateAttachRateTable([]);
+                hideStoreDetails();
+            } finally {
+                 showLoading(false, true);
+            }
+        }, 10);
+    };
+
+    const resetFilters = () => {
+         const allOptionHTML = '<option value="ALL">-- Load File First --</option>';
+         [regionFilter, districtFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(sel => { 
+             if (sel) { 
+                sel.innerHTML = allOptionHTML; // Reset options first
+                sel.value = 'ALL'; 
+                sel.disabled = true;
+            }
+         });
+         if (territoryFilter) { 
+            territoryFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; // Reset options
+            territoryFilter.selectedIndex = -1; 
+            territoryFilter.disabled = true; 
+        }
+         if (storeFilter) {
+             storeFilter.innerHTML = '<option value="ALL">-- Load File First --</option>'; // Reset options
+             storeFilter.selectedIndex = -1;
+             storeFilter.disabled = true;
+         }
+         if (storeSearch) { storeSearch.value = ''; storeSearch.disabled = true; }
+         
+         storeOptions = []; 
+         // allPossibleStores is cleared in resetUI, which is called before new file load.
+
+         Object.values(flagFiltersCheckboxes).forEach(input => { if(input) {input.checked = false; input.disabled = true;} });
+
+         if (applyFiltersButton) applyFiltersButton.disabled = true;
+         if (territorySelectAll) territorySelectAll.disabled = true;
+         if (territoryDeselectAll) territoryDeselectAll.disabled = true;
+         if (storeSelectAll) storeSelectAll.disabled = true;
+         if (storeDeselectAll) storeDeselectAll.disabled = true;
+         if (exportCsvButton) exportCsvButton.disabled = true;
+
+         const handler = updateStoreFilterOptionsBasedOnHierarchy;
+         [regionFilter, districtFilter, territoryFilter, fsmFilter, channelFilter, subchannelFilter, dealerFilter].forEach(filter => {
+             if (filter) filter.removeEventListener('change', handler);
+         });
+          Object.values(flagFiltersCheckboxes).forEach(input => {
+             if (input) input.removeEventListener('change', handler);
+          });
+    };
+
+     const resetUI = () => {
+         resetFilters(); 
+         if (filterArea) filterArea.style.display = 'none';
+         if (resultsArea) resultsArea.style.display = 'none';
+         if (mainChartInstance) { mainChartInstance.destroy(); mainChartInstance = null; }
+         if (attachRateTableBody) attachRateTableBody.innerHTML = '';
+         if (attachRateTableFooter) attachRateTableFooter.innerHTML = '';
+         if (attachTableStatus) attachTableStatus.textContent = '';
+         hideStoreDetails();
+         updateSummary([]); 
+         if(statusDiv) statusDiv.textContent = 'No file selected.';
+         allPossibleStores = []; // Clear all stores when UI is fully reset
+         rawData = []; // Clear raw data
+         filteredData = []; // Clear filtered data
+     };
+
+    const updateSummary = (data) => {
+        const totalCount = data.length;
+
+        const fieldsToClearText = [revenueWithDFValue, qtdRevenueTargetValue, qtdGapValue, quarterlyRevenueTargetValue,
+                        percentQuarterlyStoreTargetValue, revARValue, unitsWithDFValue, unitTargetValue,
+                        unitAchievementValue, visitCountValue, trainingCountValue, retailModeConnectivityValue,
+                        repSkillAchValue, vPmrAchValue, postTrainingScoreValue, eliteValue,
+                        percentQuarterlyTerritoryTargetValue, territoryRevPercentValue, districtRevPercentValue, regionRevPercentValue];
+        fieldsToClearText.forEach(el => { if (el) el.textContent = 'N/A'; });
+        [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => { if(p) p.style.display = 'none';});
+
+        if (totalCount === 0) return;
+
+        const sumRevenue = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Revenue w/DF', 0)), 0);
+        const sumQtdTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'QTD Revenue Target', 0)), 0);
+        const sumQuarterlyTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Quarterly Revenue Target', 0)), 0);
+        const sumUnits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Unit w/ DF', 0)), 0);
+        const sumUnitTarget = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Unit Target', 0)), 0);
+        const sumVisits = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Visit count', 0)), 0);
+        const sumTrainings = data.reduce((sum, row) => sum + parseNumber(safeGet(row, 'Trainings', 0)), 0);
+
+        // Variables for other averages (excluding Rev AR%)
+        let sumConnectivity = 0, countConnectivity = 0;
+        let sumRepSkill = 0, countRepSkill = 0;
+        let sumPmr = 0, countPmr = 0;
+        let sumPostTraining = 0, countPostTraining = 0;
+        let sumElite = 0, countElite = 0;
+
+        data.forEach(row => {
+            let valStr; // Use a consistent variable name for the string value from safeGet
+            // Retail Mode Connectivity
+            valStr = safeGet(row, 'Retail Mode Connectivity', null); 
+            if (isValidForAverage(valStr)) { sumConnectivity += parsePercent(valStr); countConnectivity++; }
+            // Rep Skill Ach
+            valStr = safeGet(row, 'Rep Skill Ach', null); 
+            if (isValidForAverage(valStr)) { sumRepSkill += parsePercent(valStr); countRepSkill++; }
+            // (V)PMR Ach
+            valStr = safeGet(row, '(V)PMR Ach', null); 
+            if (isValidForAverage(valStr)) { sumPmr += parsePercent(valStr); countPmr++; }
+            // Post Training Score
+            valStr = safeGet(row, 'Post Training Score', null); 
+            if (isValidForAverage(valStr)) { sumPostTraining += parseNumber(valStr); countPostTraining++; }
+            // Elite
+            valStr = safeGet(row, 'Elite', null); 
+            if (isValidForAverage(valStr)) { sumElite += parsePercent(valStr); countElite++; }
+        });
+
+        // NEW CALCULATION for Rev AR% based on sums
+        const calculatedRevAR = sumQtdTarget === 0 ? NaN : sumRevenue / sumQtdTarget;
+
+        // Calculate other averages
+        const avgConnectivity = countConnectivity > 0 ? sumConnectivity / countConnectivity : NaN;
+        const avgRepSkill = countRepSkill > 0 ? sumRepSkill / countRepSkill : NaN;
+        const avgPmr = countPmr > 0 ? sumPmr / countPmr : NaN;
+        const avgPostTraining = countPostTraining > 0 ? sumPostTraining / countPostTraining : NaN;
+        const avgElite = countElite > 0 ? sumElite / countElite : NaN;
+
+        const overallPercentStoreTarget = sumQuarterlyTarget !== 0 ? sumRevenue / sumQuarterlyTarget : NaN;
+        const overallUnitAchievement = sumUnitTarget !== 0 ? sumUnits / sumUnitTarget : NaN;
+
+        // Update DOM Elements for sums
+        if (revenueWithDFValue) { revenueWithDFValue.textContent = formatCurrency(sumRevenue); revenueWithDFValue.title = `Sum of 'Revenue w/DF' for ${totalCount} filtered stores`; }
+        if (qtdRevenueTargetValue) { qtdRevenueTargetValue.textContent = formatCurrency(sumQtdTarget); qtdRevenueTargetValue.title = `Sum of 'QTD Revenue Target' for ${totalCount} filtered stores`; }
+        if (qtdGapValue) { qtdGapValue.textContent = formatCurrency(sumRevenue - sumQtdTarget); qtdGapValue.title = `Calculated Gap (Total Revenue - QTD Target) for ${totalCount} filtered stores`; }
+        if (quarterlyRevenueTargetValue) { quarterlyRevenueTargetValue.textContent = formatCurrency(sumQuarterlyTarget); quarterlyRevenueTargetValue.title = `Sum of 'Quarterly Revenue Target' for ${totalCount} filtered stores`; }
+        if (unitsWithDFValue) { unitsWithDFValue.textContent = formatNumber(sumUnits); unitsWithDFValue.title = `Sum of 'Unit w/ DF' for ${totalCount} filtered stores`; }
+        if (unitTargetValue) { unitTargetValue.textContent = formatNumber(sumUnitTarget); unitTargetValue.title = `Sum of 'Unit Target' for ${totalCount} filtered stores`; }
+        if (visitCountValue) { visitCountValue.textContent = formatNumber(sumVisits); visitCountValue.title = `Sum of 'Visit count' for ${totalCount} filtered stores`; }
+        if (trainingCountValue) { trainingCountValue.textContent = formatNumber(sumTrainings); trainingCountValue.title = `Sum of 'Trainings' for ${totalCount} filtered stores`; }
+
+        // Update DOM Element for NEW Rev AR%
+        if (revARValue) { 
+            revARValue.textContent = formatPercent(calculatedRevAR);
+            revARValue.title = `Overall Rev AR% (Total 'Revenue w/DF' / Total 'QTD Revenue Target')`;
+        }
+
+        // Update DOM Elements for other overall percentages and averages
+        if (percentQuarterlyStoreTargetValue) { percentQuarterlyStoreTargetValue.textContent = formatPercent(overallPercentStoreTarget); percentQuarterlyStoreTargetValue.title = `Overall % Quarterly Target (Total Revenue / Total Quarterly Target)`; }
+        if (unitAchievementValue) { unitAchievementValue.textContent = formatPercent(overallUnitAchievement); unitAchievementValue.title = `Overall Unit Achievement % (Total Units / Total Unit Target)`; }
+        
+        if (retailModeConnectivityValue) { retailModeConnectivityValue.textContent = formatPercent(avgConnectivity); retailModeConnectivityValue.title = `Average 'Retail Mode Connectivity' across ${countConnectivity} stores with data`; }
+        if (repSkillAchValue) { repSkillAchValue.textContent = formatPercent(avgRepSkill); repSkillAchValue.title = `Average 'Rep Skill Ach' across ${countRepSkill} stores with data`; }
+        if (vPmrAchValue) { vPmrAchValue.textContent = formatPercent(avgPmr); vPmrAchValue.title = `Average '(V)PMR Ach' across ${countPmr} stores with data`; }
+        if (postTrainingScoreValue) { postTrainingScoreValue.textContent = isNaN(avgPostTraining) ? 'N/A' : avgPostTraining.toFixed(1); postTrainingScoreValue.title = `Average 'Post Training Score' across ${countPostTraining} stores with data`; }
+        if (eliteValue) { eliteValue.textContent = formatPercent(avgElite); eliteValue.title = `Average 'Elite' score % across ${countElite} stores with data`; }
+        
+        updateContextualSummary(data);
+    };
+
+    const updateContextualSummary = (data) => {
+        [percentQuarterlyTerritoryTargetP, territoryRevPercentP, districtRevPercentP, regionRevPercentP].forEach(p => {if (p) p.style.display = 'none'});
+        if (data.length === 0) return;
+
+        const singleRegion = regionFilter?.value !== 'ALL';
+        const singleDistrict = districtFilter?.value !== 'ALL';
+        const singleTerritory = territoryFilter && territoryFilter.selectedOptions.length === 1;
+
+        const calculateAverageExcludeBlanks = (column) => {
+            let sum = 0, count = 0;
+            data.forEach(row => {
+                const valStr = safeGet(row, column, null);
+                if (isValidForAverage(valStr)) {
+                    sum += parsePercent(valStr);
+                    count++;
+                }
+            });
+            return count > 0 ? sum / count : NaN;
+        };
+
+        const avgPercentTerritoryTarget = calculateAverageExcludeBlanks('%Quarterly Territory Rev Target');
+        const avgTerritoryRevPercent = calculateAverageExcludeBlanks('Territory Rev%');
+        const avgDistrictRevPercent = calculateAverageExcludeBlanks('District Rev%');
+        const avgRegionRevPercent = calculateAverageExcludeBlanks('Region Rev%');
+
+        if (percentQuarterlyTerritoryTargetValue) percentQuarterlyTerritoryTargetValue.textContent = formatPercent(avgPercentTerritoryTarget);
+        if (percentQuarterlyTerritoryTargetP && !isNaN(avgPercentTerritoryTarget)) percentQuarterlyTerritoryTargetP.style.display = 'block';
+
+        if (singleTerritory || singleDistrict || singleRegion) {
+             if (territoryRevPercentValue) territoryRevPercentValue.textContent = formatPercent(avgTerritoryRevPercent);
+             if (territoryRevPercentP && !isNaN(avgTerritoryRevPercent)) territoryRevPercentP.style.display = 'block';
+        }
+        if (singleDistrict || singleRegion) {
+             if (districtRevPercentValue) districtRevPercentValue.textContent = formatPercent(avgDistrictRevPercent);
+             if (districtRevPercentP && !isNaN(avgDistrictRevPercent)) districtRevPercentP.style.display = 'block';
+        }
+         if (singleRegion) {
+             if (regionRevPercentValue) regionRevPercentValue.textContent = formatPercent(avgRegionRevPercent);
+             if (regionRevPercentP && !isNaN(avgRegionRevPercent)) regionRevPercentP.style.display = 'block';
+         }
+    };
+
+    const updateCharts = (data) => {
+        if (mainChartInstance) {
+            mainChartInstance.destroy();
+            mainChartInstance = null;
+        }
+        if (!mainChartCanvas || data.length === 0) return;
+
+        const sortedData = [...data].sort((a, b) => parseNumber(safeGet(b, 'Revenue w/DF', 0)) - parseNumber(safeGet(a, 'Revenue w/DF', 0)));
+        const chartData = sortedData.slice(0, TOP_N_CHART);
+
+        const labels = chartData.map(row => safeGet(row, 'Store', 'Unknown Store'));
+        const revenueDataSet = chartData.map(row => parseNumber(safeGet(row, 'Revenue w/DF', 0)));
+        const targetDataSet = chartData.map(row => parseNumber(safeGet(row, 'QTD Revenue Target', 0)));
+
+        const backgroundColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 0.6)' : 'rgba(255, 99, 132, 0.6)');
+        const borderColors = chartData.map((_, index) => revenueDataSet[index] >= targetDataSet[index] ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)');
+
+        mainChartInstance = new Chart(mainChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Revenue (incl. DF)',
+                        data: revenueDataSet,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'QTD Revenue Target',
+                        data: targetDataSet,
+                        type: 'line',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        fill: false,
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: '#e0e0e0', callback: value => formatCurrency(value) }, grid: { color: 'rgba(224, 224, 224, 0.2)' } },
+                    x: { ticks: { color: '#e0e0e0' }, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } },
+                    tooltip: {
+                        callbacks: {
+                             label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += formatCurrency(context.parsed.y);
+                                    if (context.dataset.type !== 'line' && chartData[context.dataIndex]) {
+                                        const storeData = chartData[context.dataIndex];
+                                        const percentQtrTarget = parsePercent(safeGet(storeData, '% Quarterly Revenue Target', 0));
+                                        if (!isNaN(percentQtrTarget)) {
+                                            label += ` (${formatPercent(percentQtrTarget)} of Qtr Target)`;
+                                        }
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                onClick: (_, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const storeName = labels[index];
+                        const storeData = filteredData.find(row => safeGet(row, 'Store', null) === storeName);
+                        if (storeData) {
+                            showStoreDetails(storeData);
+                            highlightTableRow(storeName);
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const updateAttachRateTable = (data) => {
+        if (!attachRateTableBody || !attachRateTableFooter) return;
+        attachRateTableBody.innerHTML = '';
+        attachRateTableFooter.innerHTML = '';
+
+        if (data.length === 0) {
+            if(attachTableStatus) attachTableStatus.textContent = 'No data to display based on filters.';
+            return;
+        }
+
+        const sortedData = [...data].sort((a, b) => {
+             let valA = safeGet(a, currentSort.column, null);
+             let valB = safeGet(b, currentSort.column, null);
+
+             if (valA === null && valB === null) return 0;
+             if (valA === null) return currentSort.ascending ? -1 : 1;
+             if (valB === null) return currentSort.ascending ? 1 : -1;
+
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('% Target');
+             const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA);
+             const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
+
+             if (!isNaN(numA) && !isNaN(numB)) {
+                 return currentSort.ascending ? numA - numB : numB - numA;
+             } else {
+                 valA = String(valA).toLowerCase();
+                 valB = String(valB).toLowerCase();
+                 return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+             }
+         });
+
+        const averageMetrics = [
+             '% Quarterly Revenue Target', 'Tablet Attach Rate', 'PC Attach Rate', 'NC Attach Rate',
+             'TWS Attach Rate', 'WW Attach Rate', 'ME Attach Rate', 'NCME Attach Rate'
+        ];
+        const averages = {};
+        averageMetrics.forEach(key => {
+             let sum = 0, count = 0;
+             data.forEach(row => {
+                 const valStr = safeGet(row, key, null);
+                 if (isValidForAverage(valStr)) {
+                     sum += parsePercent(valStr);
+                     count++;
+                 }
+             });
+             averages[key] = count > 0 ? sum / count : NaN;
+         });
+
+        sortedData.forEach(row => {
+            const tr = document.createElement('tr');
+            const storeName = safeGet(row, 'Store', null);
+            if (storeName && String(storeName).trim() !== '') {
+                 tr.dataset.storeName = storeName;
+                 tr.onclick = () => {
+                     showStoreDetails(row);
+                     highlightTableRow(storeName);
+                 };
+
+                 const columns = [
+                     { key: 'Store', format: (val) => val },
+                     { key: '% Quarterly Revenue Target', format: formatPercent, highlight: true },
+                     { key: 'Tablet Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'PC Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'NC Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'TWS Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'WW Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'ME Attach Rate', format: formatPercent, highlight: true },
+                     { key: 'NCME Attach Rate', format: formatPercent, highlight: true },
+                 ];
+
+                 columns.forEach(col => {
+                     const td = document.createElement('td');
+                     const rawValue = safeGet(row, col.key, null);
+                     const isPercentCol = col.key.includes('Attach Rate') || col.key.includes('% Target');
+                     // For numericValue, ensure 'Store' remains a string, others are parsed.
+                     const numericValue = (col.key === 'Store') ? rawValue : (isPercentCol ? parsePercent(rawValue) : parseNumber(rawValue));
+
+                     let formattedValue;
+                     if (rawValue === null || (col.key !== 'Store' && isNaN(numericValue)) || String(rawValue).trim() === '') {
+                         formattedValue = 'N/A';
+                     } else {
+                         // Use col.format if it exists (for percentages), otherwise use the numericValue (which could be a string for 'Store')
+                         formattedValue = typeof col.format === 'function' ? col.format(numericValue) : numericValue;
+                     }
+                     td.textContent = formattedValue;
+                     td.title = `${col.key}: ${formattedValue}`;
+
+                     if (col.highlight && !isNaN(averages[col.key]) && typeof numericValue === 'number' && !isNaN(numericValue)) {
+                          td.classList.toggle('highlight-green', numericValue >= averages[col.key]);
+                          td.classList.toggle('highlight-red', numericValue < averages[col.key]);
+                      }
+                     tr.appendChild(td);
+                 });
+                 attachRateTableBody.appendChild(tr);
+             }
+        });
+
+        if (data.length > 0) {
+            const footerRow = attachRateTableFooter.insertRow();
+            const avgLabelCell = footerRow.insertCell();
+            avgLabelCell.textContent = 'Filtered Avg*';
+            avgLabelCell.title = 'Average calculated only using stores with valid data for each column';
+            avgLabelCell.style.textAlign = "right";
+            avgLabelCell.style.fontWeight = "bold";
+
+            averageMetrics.forEach(key => {
+                 const td = footerRow.insertCell();
+                 const avgValue = averages[key];
+                 td.textContent = formatPercent(avgValue);
+                 let validCount = data.filter(r => isValidForAverage(safeGet(r, key, null))).length;
+                 td.title = `Average ${key}: ${formatPercent(avgValue)} (from ${validCount} stores)`;
+                 td.style.textAlign = "right";
+             });
+         }
+
+        if(attachTableStatus) attachTableStatus.textContent = `Showing ${attachRateTableBody.rows.length} stores. Click row for details. Click headers to sort.`;
+        updateSortArrows();
+    };
+
+    const handleSort = (event) => {
+         const headerCell = event.target.closest('th');
+         if (!headerCell?.classList.contains('sortable')) return;
+         const sortKey = headerCell.dataset.sort;
+         if (!sortKey) return;
+
+         if (currentSort.column === sortKey) {
+             currentSort.ascending = !currentSort.ascending;
+         } else {
+             currentSort.column = sortKey;
+             currentSort.ascending = true;
+         }
+         updateAttachRateTable(filteredData);
+    };
+
+    const updateSortArrows = () => {
+        if (!attachRateTable) return;
+        attachRateTable.querySelectorAll('th.sortable .sort-arrow').forEach(arrow => {
+            arrow.className = 'sort-arrow';
+            arrow.textContent = ''; // Clear text if using CSS ::after for arrows
+        });
+        const currentHeaderArrow = attachRateTable.querySelector(`th[data-sort="${currentSort.column}"] .sort-arrow`);
+        if (currentHeaderArrow) {
+            currentHeaderArrow.classList.add(currentSort.ascending ? 'asc' : 'desc');
+            // CSS ::after will add the arrow character. If not using ::after, uncomment below:
+            // currentHeaderArrow.textContent = currentSort.ascending ? ' ▲' : ' ▼';
+        }
+    };
+
+    const showStoreDetails = (storeData) => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+
+        const addressParts = [
+            safeGet(storeData, 'ADDRESS1', null), safeGet(storeData, 'CITY', null),
+            safeGet(storeData, 'STATE', null), safeGet(storeData, 'ZIPCODE', null)
+        ].filter(part => part && String(part).trim() !== '');
+        const addressString = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+
+        const latitude = parseNumber(safeGet(storeData, 'LATITUDE_ORG', NaN));
+        const longitude = parseNumber(safeGet(storeData, 'LONGITUDE_ORG', NaN));
+        let mapsLinkHtml = `<p style="color: #aaa; font-style: italic;">(Map coordinates not available)</p>`;
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+            const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            mapsLinkHtml = `<p><a href="${mapsUrl}" target="_blank" title="Open in Google Maps">View on Google Maps</a></p>`;
+        }
+
+        let flagSummaryHtml = FLAG_HEADERS.map(flag => {
+            const flagValue = safeGet(storeData, flag, 'NO');
+            const isTrue = (flagValue === true || String(flagValue).toUpperCase() === 'YES' || String(flagValue) === 'Y' || flagValue === 1 || String(flagValue) === '1');
+            return `<span title="${flag.replace(/_/g, ' ')}" data-flag="${isTrue}">${flag.replace(/_/g, ' ')} ${isTrue ? '✔' : '✘'}</span>`;
+        }).join(' | ');
+
+        storeDetailsContent.innerHTML = `
+            <p><strong>Store:</strong> ${safeGet(storeData, 'Store')}</p>
+            <p><strong>Address:</strong> ${addressString}</p>
+            ${mapsLinkHtml}
+            <hr>
+            <p><strong>IDs:</strong> Store: ${safeGet(storeData, 'STORE ID')} | Org: ${safeGet(storeData, 'ORG_STORE_ID')} | CV: ${safeGet(storeData, 'CV_STORE_ID')} | CinglePoint: ${safeGet(storeData, 'CINGLEPOINT_ID')}</p>
+            <p><strong>Type:</strong> ${safeGet(storeData, 'STORE_TYPE_NAME')} | Nat Tier: ${safeGet(storeData, 'National_Tier')} | Merch Lvl: ${safeGet(storeData, 'Merchandising_Level')} | Comb Tier: ${safeGet(storeData, 'Combined_Tier')}</p>
+            <hr>
+            <p><strong>Hierarchy:</strong> ${safeGet(storeData, 'REGION')} > ${safeGet(storeData, 'DISTRICT')} > ${safeGet(storeData, 'Q2 Territory')}</p>
+            <p><strong>FSM:</strong> ${safeGet(storeData, 'FSM NAME')}</p>
+            <p><strong>Channel:</strong> ${safeGet(storeData, 'CHANNEL')} / ${safeGet(storeData, 'SUB_CHANNEL')}</p>
+            <p><strong>Dealer:</strong> ${safeGet(storeData, 'DEALER_NAME')}</p>
+            <hr>
+            <p><strong>Visits:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Visit count', 0)))} | <strong>Trainings:</strong> ${formatNumber(parseNumber(safeGet(storeData, 'Trainings', 0)))}</p>
+            <p><strong>Connectivity:</strong> ${formatPercent(parsePercent(safeGet(storeData, 'Retail Mode Connectivity', 0)))}</p>
+            <hr>
+            <p><strong>Flags:</strong> ${flagSummaryHtml}</p>
+        `;
+        storeDetailsSection.style.display = 'block';
+        closeStoreDetailsButton.style.display = 'inline-block';
+    };
+
+    const hideStoreDetails = () => {
+        if (!storeDetailsContent || !storeDetailsSection || !closeStoreDetailsButton) return;
+        storeDetailsContent.innerHTML = 'Select a store from the table or chart for details, or apply filters resulting in a single store.';
+        storeDetailsSection.style.display = 'none';
+        closeStoreDetailsButton.style.display = 'none';
+        highlightTableRow(null);
+    };
+
+     const highlightTableRow = (storeName) => {
+         if (selectedStoreRow) {
+             selectedStoreRow.classList.remove('selected-row');
+             selectedStoreRow = null;
+         }
+        if (storeName && attachRateTableBody) {
+             try {
+                 selectedStoreRow = attachRateTableBody.querySelector(`tr[data-store-name="${CSS.escape(storeName)}"]`);
+                 if (selectedStoreRow) {
+                     selectedStoreRow.classList.add('selected-row');
+                 }
+             } catch (e) {
+                 console.error("Error selecting table row:", e, "for storeName:", storeName);
+                 selectedStoreRow = null;
+             }
+         }
+    };
+
+    const exportData = () => {
+        if (filteredData.length === 0) {
+            alert("No filtered data to export.");
+            return;
+        }
+        try {
+            if (!attachRateTable) throw new Error("Attach rate table not found for headers.");
+            const headers = Array.from(attachRateTable.querySelectorAll('thead th'))
+                                 .map(th => th.dataset.sort || th.textContent.replace(/ [▲▼]$/, '').trim());
+
+             const dataToExport = filteredData.map(row => {
+                return headers.map(headerKey => {
+                    let value = safeGet(row, headerKey, '');
+                    const isPercentLike = headerKey.includes('%') || headerKey.includes('Rate') || headerKey.includes('Ach') || headerKey.includes('Connectivity') || headerKey.includes('Elite');
+
+                    if (isPercentLike) {
+                         const numVal = parsePercent(value);
+                         return isNaN(numVal) ? '' : numVal;
+                     } else {
+                         const numVal = parseNumber(value);
+                         if (!isNaN(numVal) && typeof value !== 'boolean' && String(value).trim() !== '') {
+                             return numVal;
+                         }
+                         if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                             return `"${value.replace(/"/g, '""')}"`;
+                         }
+                         return value;
+                     }
+                });
+             });
+
+            let csvContent = "data:text/csv;charset=utf-8,"
+                + headers.join(",") + "\n"
+                + dataToExport.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "fsm_dashboard_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Error exporting CSV:", error);
+            alert("Error generating CSV export. See console for details.");
+        }
+    };
+
+    const generateEmailBody = () => {
+        if (filteredData.length === 0) return "No data available based on current filters.";
+        let body = "FSM Dashboard Summary:\n";
+        body += "---------------------------------\n";
+        body += `Filters Applied: ${getFilterSummary()}\n`;
+        body += `Stores Found: ${filteredData.length}\n`;
+        body += "---------------------------------\n\n";
+        body += "Performance Summary:\n";
+        body += `- Total Revenue (incl. DF): ${revenueWithDFValue?.textContent || 'N/A'}\n`;
+        body += `- QTD Revenue Target: ${qtdRevenueTargetValue?.textContent || 'N/A'}\n`;
+        body += `- QTD Gap: ${qtdGapValue?.textContent || 'N/A'}\n`;
+        // Note: The revARValue.textContent will now reflect the new calculation method.
+        body += `- Rev AR%: ${revARValue?.textContent || 'N/A'} (Overall: Total Revenue / Total QTD Target)\n`;
+        body += `- % Store Quarterly Target: ${percentQuarterlyStoreTargetValue?.textContent || 'N/A'}\n`;
+        body += `- Total Units (incl. DF): ${unitsWithDFValue?.textContent || 'N/A'}\n`;
+        body += `- Unit Achievement %: ${unitAchievementValue?.textContent || 'N/A'}\n`;
+        body += `- Total Visits: ${visitCountValue?.textContent || 'N/A'}\n`;
+        body += `- Avg. Connectivity: ${retailModeConnectivityValue?.textContent || 'N/A'}\n\n`;
+        body += "Mysteryshop & Training (Avg*):\n";
+        body += `- Rep Skill Ach: ${repSkillAchValue?.textContent || 'N/A'}\n`;
+        body += `- (V)PMR Ach: ${vPmrAchValue?.textContent || 'N/A'}\n`;
+        body += `- Post Training Score: ${postTrainingScoreValue?.textContent || 'N/A'}\n`;
+        body += `- Elite Score %: ${eliteValue?.textContent || 'N/A'}\n\n`;
+        body += "*Averages calculated only using stores with valid data for each metric.\n\n";
+
+         const sortedForEmail = [...filteredData].sort((a, b) => {
+             let valA = safeGet(a, currentSort.column, null); let valB = safeGet(b, currentSort.column, null);
+             if (valA === null && valB === null) return 0; if (valA === null) return currentSort.ascending ? -1 : 1; if (valB === null) return currentSort.ascending ? 1 : -1;
+             const isPercentCol = currentSort.column.includes('Attach Rate') || currentSort.column.includes('%') || currentSort.column.includes('Target');
+             const numA = isPercentCol ? parsePercent(valA) : parseNumber(valA); const numB = isPercentCol ? parsePercent(valB) : parseNumber(valB);
+             if (!isNaN(numA) && !isNaN(numB)) return currentSort.ascending ? numA - numB : numB - numA;
+             valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); return currentSort.ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+         });
+
+        const topStores = sortedForEmail.slice(0, 5);
+        if (topStores.length > 0) {
+            body += `Top ${topStores.length} Stores (Sorted by ${currentSort.column} ${currentSort.ascending ? 'ASC' : 'DESC'}):\n`;
+            topStores.forEach((store, index) => {
+                 body += `${index + 1}. ${safeGet(store, 'Store', 'N/A')} (% Qtr Rev: ${formatPercent(parsePercent(safeGet(store, '% Quarterly Revenue Target', 0)))}, NCME: ${formatPercent(parsePercent(safeGet(store, 'NCME Attach Rate', 0)))}) \n`;
+            });
+             body += "\n";
+        }
+        body += "---------------------------------\nGenerated by FSM Dashboard\n";
+        return body;
+    };
+
+    const getFilterSummary = () => {
+        let summary = [];
+        if (regionFilter?.value !== 'ALL') summary.push(`Region: ${regionFilter.value}`);
+        if (districtFilter?.value !== 'ALL') summary.push(`District: ${districtFilter.value}`);
+        const territories = territoryFilter ? Array.from(territoryFilter.selectedOptions).map(o => o.value) : [];
+        if (territories.length > 0) summary.push(`Territories: ${territories.length === 1 ? territories[0] : `${territories.length} selected`}`);
+        if (fsmFilter?.value !== 'ALL') summary.push(`FSM: ${fsmFilter.value}`);
+        if (channelFilter?.value !== 'ALL') summary.push(`Channel: ${channelFilter.value}`);
+        if (subchannelFilter?.value !== 'ALL') summary.push(`Subchannel: ${subchannelFilter.value}`);
+        if (dealerFilter?.value !== 'ALL') summary.push(`Dealer: ${dealerFilter.value}`);
+        const stores = storeFilter ? Array.from(storeFilter.selectedOptions).map(o => o.value) : [];
+         if (stores.length > 0) summary.push(`Stores: ${stores.length === 1 ? stores[0] : `${stores.length} selected`}`);
+         const flags = Object.entries(flagFiltersCheckboxes).filter(([, input]) => input?.checked).map(([key])=> key.replace(/_/g, ' '));
+         if (flags.length > 0) summary.push(`Attributes: ${flags.join(', ')}`);
+        return summary.length > 0 ? summary.join('; ') : 'None';
+    };
+
+    const handleShareEmail = () => {
+        if (!emailRecipientInput || !shareStatus) return;
+        const recipient = emailRecipientInput.value;
+        if (!recipient || !/\S+@\S+\.\S+/.test(recipient)) {
+            shareStatus.textContent = "Please enter a valid recipient email address.";
+            return;
+        }
+        try {
+            const subject = `FSM Dashboard Summary - ${new Date().toLocaleDateString()}`;
+            const bodyContent = generateEmailBody();
+            const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyContent)}`;
+             if (mailtoLink.length > 2000) {
+                 shareStatus.textContent = "Generated email body is too long for a mailto link. Try applying more filters or copy the content manually.";
+                 console.warn("Mailto link length exceeds 2000 characters:", mailtoLink.length);
+                 return;
+             }
+            window.location.href = mailtoLink;
+            shareStatus.textContent = "Your email client should open. Please review and send the email.";
+        } catch (error) {
+            console.error("Error generating mailto link:", error);
+            shareStatus.textContent = "Error generating email content. Check console for details.";
+        }
+    };
+
+     const selectAllOptions = (selectElement) => {
+         if (!selectElement) return;
+         Array.from(selectElement.options).forEach(option => option.selected = true);
+         if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
+    };
+
+     const deselectAllOptions = (selectElement) => {
+         if (!selectElement) return;
+         selectElement.selectedIndex = -1;
+         if (selectElement === territoryFilter) updateStoreFilterOptionsBasedOnHierarchy();
+    };
+
+    // --- Event Listeners ---
+    excelFileInput?.addEventListener('change', handleFile);
+    applyFiltersButton?.addEventListener('click', applyFilters);
+    storeSearch?.addEventListener('input', filterStoreOptions);
+    exportCsvButton?.addEventListener('click', exportData);
+    shareEmailButton?.addEventListener('click', handleShareEmail);
+    closeStoreDetailsButton?.addEventListener('click', hideStoreDetails);
+
+    territorySelectAll?.addEventListener('click', () => selectAllOptions(territoryFilter));
+    territoryDeselectAll?.addEventListener('click', () => deselectAllOptions(territoryFilter));
+    storeSelectAll?.addEventListener('click', () => selectAllOptions(storeFilter));
+    storeDeselectAll?.addEventListener('click', () => deselectAllOptions(storeFilter));
+
+    attachRateTable?.querySelector('thead')?.addEventListener('click', handleSort);
+
+    // --- Initial Setup ---
+    resetUI();
+    if (!mainChartCanvas) console.warn("Main chart canvas context not found on load. Chart will not render.");
+
+}); // End DOMContentLoaded
