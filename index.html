@@ -3,104 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FSM Dashboard</title>
+    <title>FSM Dashboard Enhanced</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <meta name="theme-color" content="#2c2c2c">
 </head>
 <body>
 
-    <h1>FSM Excel Visualization Dashboard</h1>
+    <h1>FSM Performance Dashboard</h1>
 
-    <p class="upload-instructions">Upload an Excel file (.xlsx or .xls) containing store revenue data.</p>
+    <p class="upload-instructions">Upload the FSM data Excel file (.xlsx or .xls).</p>
 
     <div class="input-area card">
         <label for="excelFile">Choose Excel File:</label>
         <input type="file" id="excelFile" accept=".xlsx, .xls" />
-    </div>
-
-    <!-- Filter Controls Section - REORDERED -->
-    <div class="filter-controls card">
-        <!-- Territory Filter -->
-        <div class="filter-group">
-            <label for="territoryFilter">Territory:</label>
-            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
-            <select id="territoryFilter" disabled multiple size="6">
-                <option value="ALL">-- All Territories --</option>
-            </select>
+        <div id="loadingIndicator" style="display: none;">
+            <div class="spinner"></div> Processing file...
         </div>
-         <!-- Subchannel Filter -->
-        <div class="filter-group">
-            <label for="subchannelFilter">Filter by Subchannel:</label>
-            <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
         </div>
-         <!-- Store Filter -->
-        <div class="filter-group">
-            <label for="storeFilter">Filter by Store:</label>
-            <small style="font-size: 0.8em; color: #a0a0a0; display: block; margin-bottom: 0.25rem;">(Hold Ctrl/Cmd to select multiple)</small>
-            <select id="storeFilter" disabled multiple size="6">
-                <option value="ALL">-- All Stores --</option>
-            </select>
+
+    <div id="filterArea" class="card" style="display: none;">
+        <h2>Filters</h2>
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label for="regionFilter">Region:</label>
+                <select id="regionFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="districtFilter">District:</label>
+                <select id="districtFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="territoryFilter">Q2 Territory:</label>
+                 <div class="multi-select-controls">
+                    <button class="select-button" id="territorySelectAll" disabled>Select All</button>
+                    <button class="select-button" id="territoryDeselectAll" disabled>Deselect All</button>
+                 </div>
+                <small class="multi-select-info">(Hold Ctrl/Cmd to select multiple)</small>
+                <select id="territoryFilter" disabled multiple size="6">
+                    <option value="ALL">-- Load File First --</option>
+                </select>
+            </div>
+             <div class="filter-group">
+                <label for="fsmFilter">FSM Name:</label>
+                <select id="fsmFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+
+            <div class="filter-group">
+                <label for="channelFilter">Channel:</label>
+                <select id="channelFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="subchannelFilter">Subchannel:</label>
+                <select id="subchannelFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+             <div class="filter-group">
+                <label for="dealerFilter">Dealer Name:</label>
+                <select id="dealerFilter" disabled><option value="ALL">-- Load File First --</option></select>
+            </div>
+
+             <div class="filter-group filter-group-store">
+                <label for="storeFilter">Store:</label>
+                 <input type="text" id="storeSearch" placeholder="Search stores..." disabled>
+                 <div class="multi-select-controls">
+                     <button class="select-button" id="storeSelectAll" disabled>Select All</button>
+                    <button class="select-button" id="storeDeselectAll" disabled>Deselect All</button>
+                 </div>
+                <small class="multi-select-info">(Hold Ctrl/Cmd to select multiple)</small>
+                <select id="storeFilter" disabled multiple size="8">
+                     <option value="ALL">-- Load File First --</option>
+                </select>
+            </div>
+
+            <div class="filter-group-flags">
+                 <label class="flags-label">Store Attributes:</label>
+                 <div class="flag-toggles">
+                    <label><input type="checkbox" id="superStoreFilter" value="SUPER STORE" disabled> Super Store</label>
+                    <label><input type="checkbox" id="goldenRhinoFilter" value="GOLDEN RHINO" disabled> Golden Rhino</label>
+                    <label><input type="checkbox" id="gceFilter" value="GCE" disabled> GCE</label>
+                    <label><input type="checkbox" id="aiZoneFilter" value="AI_Zone" disabled> AI Zone</label>
+                    <label><input type="checkbox" id="hispanicMarketFilter" value="Hispanic_Market" disabled> Hispanic Market</label>
+                    <label><input type="checkbox" id="evRouteFilter" value="EV ROUTE" disabled> EV Route</label>
+                 </div>
+            </div>
         </div>
+         <button id="applyFiltersButton" class="apply-filters-button" disabled>Apply Filters</button>
+         <div id="filterLoadingIndicator" style="display: none;">
+            <div class="spinner-small"></div> Applying filters...
+         </div>
     </div>
-    <!-- End Filter Controls -->
+    <p id="status" class="status-message" aria-live="polite">No file selected.</p>
 
-    <p id="status">No file selected.</p>
+    <div id="resultsArea" class="results-container" style="display: none;">
 
-    <!-- Store Details Section -->
-    <div id="storeDetailsSection" class="store-details-container card" style="display: none;">
-        <!-- Content will be populated by JS -->
-    </div>
-
-    <!-- Placeholder for the summary data -->
-    <div id="summaryData" class="summary-container card"></div>
-
-    <!-- Mysteryshop Section -->
-    <div id="repPmrSection" class="card rep-pmr-container" style="display: none;">
-        <h3>Mysteryshop Results</h3>
-        <p id="repSkillP">Rep Skill Ach: <span id="repSkillAchValue">N/A</span></p>
-        <p id="vPmrP">(V)PMR Ach: <span id="vPmrAchValue">N/A</span></p>
-    </div>
-
-    <!-- Training Stats Section -->
-    <div id="trainingStatsSection" class="card training-stats-container" style="display: none;">
-        <h3>Training Stats (Filtered Avg)</h3>
-        <p id="eliteP" style="display: none;">Elite: <span id="eliteValue">N/A</span></p>
-        <p id="postTrainingP">Post Training Score: <span id="postTrainingScoreValue">N/A</span></p>
-    </div>
-
-    <!-- Placeholder for the Bar Chart -->
-    <div class="chart-container card" id="lineChartContainer">
-        <canvas id="lineChartCanvas"></canvas>
-    </div>
-
-    <!-- Placeholder for the Attach Rate Table -->
-    <div class="table-container card" id="attachRateTableContainer">
-        <h2>Attach Rates</h2> <!-- Title updated dynamically -->
-        <div class="table-wrapper">
-             <table id="attachRateTable">
-                <thead><tr><th>Store</th><th>Tablet</th><th>PC</th><th>NC</th><th>TWS</th><th>WW</th><th>ME</th><th>NCME</th></tr></thead>
-                <tbody id="attachRateTableBody"></tbody>
-            </table>
+        <div id="storeDetailsSection" class="store-details-container card" style="display: none;">
+             <h3>Store Details</h3>
+            <div id="storeDetailsContent"> Select a store from the table or chart for details.</div>
+             <button id="closeStoreDetailsButton" class="close-button" style="display:none;">Close Details</button>
         </div>
-         <p id="attachTableStatus" style="text-align: center; font-style: italic; margin-top: 10px;"></p>
-    </div>
 
-    <!-- Share Results Section -->
-    <div id="shareSection" class="card share-container">
-        <h3>Share Results via Email</h3>
-        <div class="share-controls">
-            <label for="emailRecipient">Recipient Email:</label>
-            <input type="email" id="emailRecipient" placeholder="Enter email address">
-            <button id="shareEmailButton">Generate & Share Email</button>
+        <div id="summaryData" class="summary-container card">
+            <h3>Performance Summary (Filtered)</h3>
+             <div class="summary-grid">
+                 <p title="Sum of 'Revenue w/DF' for filtered stores">Total Revenue (incl. DF): <strong id="revenueWithDFValue">N/A</strong></p>
+                <p title="Sum of 'QTD Revenue Target' for filtered stores">QTD Revenue Target: <strong id="qtdRevenueTargetValue">N/A</strong></p>
+                <p title="Calculated Gap (Total Revenue - QTD Target) for filtered stores">QTD Gap: <strong id="qtdGapValue">N/A</strong></p>
+                <p title="Sum of 'Quarterly Revenue Target' for filtered stores">Full Quarter Target: <strong id="quarterlyRevenueTargetValue">N/A</strong></p>
+                <p title="Overall REV% to Quarterly Target (Total Revenue / Total Quarterly Target)">REV% to Quarterly Target: <strong id="percentQuarterlyStoreTargetValue">N/A</strong></p>
+                <p title="Average 'Rev AR%' across stores with data">Rev AR%: <strong id="revARValue">N/A</strong></p>
+
+                 <p title="Sum of 'Unit w/ DF' for filtered stores">Total Units (incl. DF): <strong id="unitsWithDFValue">N/A</strong></p>
+                <p title="Sum of 'Unit Target' for filtered stores">Unit Target: <strong id="unitTargetValue">N/A</strong></p>
+                <p title="Overall Unit Achievement % (Total Units / Total Unit Target)">Unit Achievement %: <strong id="unitAchievementValue">N/A</strong></p>
+
+                 <p title="Sum of 'Visit count' for filtered stores">Total Visits: <strong id="visitCountValue">N/A</strong></p>
+                <p title="Sum of 'Trainings' for filtered stores">Total Trainings: <strong id="trainingCountValue">N/A</strong></p>
+                <p title="Average 'Retail Mode Connectivity' across stores with data">Avg. Retail Mode Connectivity: <strong id="retailModeConnectivityValue">N/A</strong></p>
+
+                 <p id="percentQuarterlyTerritoryTargetP" style="display: none;" title="Average '%Quarterly Territory Rev Target' across stores with data">% Territory Quarterly Target: <strong id="percentQuarterlyTerritoryTargetValue">N/A</strong></p>
+                 <p id="territoryRevPercentP" style="display: none;" title="Average 'Territory Rev%' across stores with data">Territory Rev Contrib %: <strong id="territoryRevPercentValue">N/A</strong></p>
+                 <p id="districtRevPercentP" style="display: none;" title="Average 'District Rev%' across stores with data">District Rev Contrib %: <strong id="districtRevPercentValue">N/A</strong></p>
+                 <p id="regionRevPercentP" style="display: none;" title="Average 'Region Rev%' across stores with data">Region Rev Contrib %: <strong id="regionRevPercentValue">N/A</strong></p>
+            </div>
         </div>
-        <p id="shareStatus" class="share-status"></p>
-        <p class="share-note">Note: This will open your default desktop email client. You must click "Send" in the email client.</p>
-    </div>
+
+        <div class="stats-row">
+            <div id="repPmrSection" class="card rep-pmr-container">
+                <h3 title="Averages calculated only from stores with data for each metric">Mysteryshop (Filtered Avg*)</h3>
+                <p title="Average 'Rep Skill Ach' across stores with data">Rep Skill Ach: <strong id="repSkillAchValue">N/A</strong></p>
+                <p title="Average '(V)PMR Ach' across stores with data">(V)PMR Ach: <strong id="vPmrAchValue">N/A</strong></p>
+            </div>
+
+            <div id="trainingStatsSection" class="card training-stats-container">
+                 <h3 title="Averages calculated only from stores with data for each metric">Training Stats (Filtered Avg*)</h3>
+                 <p title="Average 'Post Training Score' across stores with data">Post Training Score: <strong id="postTrainingScoreValue">N/A</strong></p>
+                <p title="Average 'Elite' score % across stores with data">Elite Score %: <strong id="eliteValue">N/A</strong></p>
+            </div>
+        </div>
+
+        <div class="chart-container card" id="mainChartContainer">
+             <h3>Revenue Performance (Filtered Stores/Groups)</h3>
+            <canvas id="mainChartCanvas"></canvas>
+        </div>
+
+         <div class="chart-container card" id="secondaryChartContainer" style="display: none;">
+            <h3>Secondary Chart Placeholder</h3>
+            <canvas id="secondaryChartCanvas"></canvas>
+             <p style="text-align:center; font-size: 0.9em; color: #a0a0a0;">Chart options coming soon.</p>
+        </div>
 
 
-    <!-- Include Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <div class="table-container card" id="attachRateTableContainer">
+             <div class="table-header">
+                <h2>Attach Rates (Filtered Stores)</h2>
+                <button id="exportCsvButton" class="export-button" title="Export current table data to CSV">Export Table (CSV)</button>
+             </div>
+             <div class="table-wrapper">
+                 <table id="attachRateTable">
+                     <thead>
+                         <tr>
+                             <th data-sort="Store" class="sortable">Store <span class="sort-arrow"></span></th>
+                             <th data-sort="% Quarterly Revenue Target" class="sortable" title="Percentage obtained of the store's Quarterly Revenue Target">% Qtr Rev Target <span class="sort-arrow"></span></th>
+                             <th data-sort="Tablet Attach Rate" class="sortable" title="Tablet Attach Rate">Tablet <span class="sort-arrow"></span></th>
+                             <th data-sort="PC Attach Rate" class="sortable" title="PC Attach Rate">PC <span class="sort-arrow"></span></th>
+                             <th data-sort="NC Attach Rate" class="sortable" title="NC = Tablet + PC Attach Rate">NC <span class="sort-arrow"></span></th>
+                             <th data-sort="TWS Attach Rate" class="sortable" title="True Wireless Stereo (Buds) Attach Rate">TWS <span class="sort-arrow"></span></th>
+                             <th data-sort="WW Attach Rate" class="sortable" title="Wearable Watch Attach Rate">WW <span class="sort-arrow"></span></th>
+                             <th data-sort="ME Attach Rate" class="sortable" title="ME = TWS + WW Attach Rate">ME <span class="sort-arrow"></span></th>
+                             <th data-sort="NCME Attach Rate" class="sortable" title="NCME = Total Attach Rate">NCME <span class="sort-arrow"></span></th>
+                         </tr>
+                     </thead>
+                    <tbody id="attachRateTableBody"></tbody>
+                    <tfoot id="attachRateTableFooter"></tfoot> </table>
+            </div>
+             <p id="attachTableStatus" class="table-status"></p>
+        </div>
+
+        <div id="shareSection" class="card share-container">
+            <h3>Share Summary via Email</h3>
+            <div class="share-controls">
+                <label for="emailRecipient">Recipient Email:</label>
+                <input type="email" id="emailRecipient" placeholder="Enter email address">
+                <button id="shareEmailButton">Generate & Share Email</button>
+            </div>
+            <p id="shareStatus" class="share-status"></p>
+            <p class="share-note">Note: This will open your default desktop email client with a pre-filled summary. You must click "Send" in the email client.</p>
+        </div>
+
+    </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.js"></script>
     <script src="script.js"></script>
 
