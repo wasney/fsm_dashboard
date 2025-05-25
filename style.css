@@ -1,6 +1,6 @@
 /*
-    Timestamp: 2025-05-09T06:54:45EDT
-    Summary: Added styles for 'filter-actions-container' and 'reset-filters-button'. Adjusted 'apply-filters-button' for flex layout.
+    Timestamp: 2025-05-25T13:52:34EDT
+    Summary: Added styles for a beta announcement banner and adjusted theme toggle button positioning slightly.
 */
 
 :root {
@@ -52,6 +52,9 @@
     --disabled-text: #888;
     --disabled-border: #555;
     --accent-color-checkbox: #58a6ff;
+    --beta-banner-bg: #2a3f5f; /* A bit darker blue for contrast */
+    --beta-banner-text: #e0e0e0;
+    --beta-banner-link-color: #90caf9;
 }
 
 body.light-theme {
@@ -102,6 +105,9 @@ body.light-theme {
     --disabled-text: #adb5bd;
     --disabled-border: #ced4da;
     --accent-color-checkbox: #007bff;
+    --beta-banner-bg: #cfe2ff; /* A light blue for light theme */
+    --beta-banner-text: #004085;
+    --beta-banner-link-color: #0056b3;
 }
 
 /* --- Global Resets & Body --- */
@@ -109,7 +115,8 @@ body.light-theme {
 body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     margin: 0;
-    padding: 0;
+    padding: 0; /* Reset padding, will be added by banner if needed */
+    padding-top: 40px; /* Make space for the banner */
     background-color: var(--body-bg); 
     color: var(--text-color); 
     line-height: 1.5;
@@ -119,10 +126,38 @@ body {
 }
 .container { max-width: 1400px; margin: 0 auto; padding: 10px; }
 
+/* --- Beta Banner --- */
+.beta-banner {
+    background-color: var(--beta-banner-bg);
+    color: var(--beta-banner-text);
+    text-align: center;
+    padding: 0.5rem 1rem; /* Adjusted padding */
+    font-size: 0.9rem;
+    position: fixed; /* Fixed position at the top */
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1002; /* Higher than theme toggle */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-bottom: 1px solid var(--border-color);
+}
+.beta-banner p {
+    margin: 0;
+}
+.beta-banner a {
+    color: var(--beta-banner-link-color);
+    font-weight: 600;
+    text-decoration: underline;
+}
+.beta-banner a:hover {
+    text-decoration: none;
+}
+
+
 /* --- Theme Toggle Button --- */
 .theme-toggle-button {
     position: fixed;
-    top: 15px;
+    top: 55px; /* Adjusted to be below beta banner */
     right: 15px;
     z-index: 1001; 
     background-color: var(--card-bg);
@@ -134,7 +169,7 @@ body {
     font-size: 1.1rem; 
     line-height: 1;
     box-shadow: 0 1px 3px var(--card-shadow);
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, top 0.3s ease;
 }
 .theme-toggle-button:hover {
     opacity: 0.85;
@@ -345,6 +380,9 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
     .share-controls { flex-direction: row; align-items: center; }
     .share-controls label { margin-bottom: 0; }
     .filter-group-store { grid-column: span 1; }
+    .beta-banner { padding: 0.6rem 1rem; font-size: 0.95rem; }
+    body { padding-top: 48px; } /* Adjust body padding for slightly taller banner */
+    .theme-toggle-button { top: 60px; }
 }
 
 @media (min-width: 1200px) { 
@@ -359,4 +397,8 @@ body.light-theme #storeDetailsContent span[data-flag="true"] { color: #218838; }
     #attachRateTable th, #attachRateTable td { padding: 0.75rem 1rem; }
     .filter-group-store { grid-column: span 2; }
     .top5-card, .bottom5-card { min-width: 0; }
+    .beta-banner { font-size: 1rem; }
+    body { padding-top: 52px; } /* Adjust body padding for slightly taller banner */
+    .theme-toggle-button { top: 65px; }
+
 }
